@@ -1,0 +1,6 @@
+*.py[co]
+*.sw[po]
+db.sqlite3
+manage.py
+media
+pro1
