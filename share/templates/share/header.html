@@ -1,0 +1,7 @@
+<h2>File sharing
+{% if request.user.is_authenticated %}
+  <small><a href="{% url 'share:logout' %}">logout</a></small>
+{% else %}
+  <small><a href="{% url 'share:login' %}">login</a></small>
+{% endif %}
+</h2>

@@ -1,0 +1,14 @@
+{% extends "share/base.html" %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+
+<div>
+文件类表
+<a href="{% url 'share:shares' %}">共享列表</a>
+</div>
+
+{% endblock %}

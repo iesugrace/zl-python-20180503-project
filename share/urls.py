@@ -1,0 +1,12 @@
+from django.conf.urls import url
+
+from . import views
+
+urlpatterns = [
+    url(r'^$', views.index, name='index'),
+    url(r'^login/$', views.login, name='login'),
+    url(r'^logout/$', views.logout, name='logout'),
+    url(r'^signup/$', views.signup, name='signup'),
+    url(r'^files/(?:(?P<dir>[0-9a-z]+)/)?$', views.list_files, name='files'),
+    url(r'^shares/', views.list_shares, name='shares'),
+]

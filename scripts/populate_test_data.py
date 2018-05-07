@@ -16,7 +16,7 @@ sys.path.insert(0, '')
 os.environ['DJANGO_SETTINGS_MODULE'] = 'pro1.settings'
 django.setup()
 
-from share.models import User, File, FileObject, Share
+from share.models import User, File, Directory, FileObject, Share
 
 users = [
     {'name': 'alice', 'password': 'a9993e364706816aba3e25717850c26c9cd0d89d'},
@@ -127,7 +127,7 @@ def gen_code():
     return ''.join(picked)
 
 
-# 创建数据库记录：用户，文件，文件对象，共享
+# 创建数据库记录：用户，文件，文件对象，目录，共享
 for user in users:
     print('creating user %s' % user['name'])
     u = User.objects.create(name=user['name'], password=digest(user['password']))
@@ -169,3 +169,17 @@ for user in users:
         dst_dir = os.path.dirname(dst)
         os.makedirs(dst_dir, mode=0o755, exist_ok=True)
         os.system('cp -v %s %s' % (src, dst))
+
+    # 创建目录dir1, dir2，dir2在dir1中，把第三个文件放到dir2中，共享dir1
+    print('creating Directories')
+    dir1 = Directory.objects.create(name='dir1', owner=u)
+    dir2 = Directory.objects.create(name='dir2', owner=u, parent=dir1)
+    dir1.add(dir2)
+    file = File.objects.filter(owner=u).order_by('-pk')[0]
+    dir2.add(file)
+    Share.objects.create(
+            target=dir1.pk,
+            kind='directory',
+            code=gen_code(),
+            expire=timezone.now()+timedelta(days=10+i)
+    )

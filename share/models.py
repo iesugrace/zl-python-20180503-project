@@ -22,12 +22,38 @@ class Directory(models.Model):
     # 上传者/拥有者
     owner = models.ForeignKey('User')
     # 所属的父目录
-    parent = models.ForeignKey('Directory')
+    parent = models.ForeignKey('Directory', null=True)
     # 下一级节点
     # 下一级目录/文件的表示法：
     # '123:34567:15379'
-    subdirs = models.CharField(max_length=204800)
-    files = models.CharField(max_length=204800)
+    subdirs = models.CharField(max_length=204800, default='')
+    files = models.CharField(max_length=204800, default='')
+
+    def add(self, other):
+        if isinstance(other, Directory):
+            name = 'subdirs'
+        elif isinstance(other, File):
+            name = 'files'
+        else:
+            raise ValueError('must be either Directory or File')
+        text = ':%s' % other.pk
+        value = getattr(self, name)
+        if text not in value:
+            setattr(self, name, value + text)
+            self.save()
+
+    def remove(self, other):
+        if isinstance(other, Directory):
+            name = 'subdirs'
+        elif isinstance(other, File):
+            name = 'files'
+        else:
+            raise ValueError('must be either Directory or File')
+        text = ':%s' % other.pk
+        value = getattr(self, name)
+        if text in value:
+            setattr(self, name, value.replace(text, ''))
+            self.save()
 
 
 class FileObject(models.Model):
