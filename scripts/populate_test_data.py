@@ -151,12 +151,14 @@ for user in users:
         print('creating Share record for %s' % name)
         if i == 0:  # 创建匿名共享
             Share.objects.create(
-                    file=file,
+                    target=file.pk,
+                    kind='file',
                     expire=timezone.now()+timedelta(days=10+i)
             )
         elif i == 1:    # 提取码共享
             Share.objects.create(
-                    file=file,
+                    target=file.pk,
+                    kind='file',
                     code=gen_code(),
                     expire=timezone.now()+timedelta(days=10+i)
             )

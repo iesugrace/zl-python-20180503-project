@@ -16,6 +16,20 @@ class File(models.Model):
     fo = models.ForeignKey('FileObject')
 
 
+class Directory(models.Model):
+    # 目录名字
+    name = models.CharField(max_length=256)
+    # 上传者/拥有者
+    owner = models.ForeignKey('User')
+    # 所属的父目录
+    parent = models.ForeignKey('Directory')
+    # 下一级节点
+    # 下一级目录/文件的表示法：
+    # '123:34567:15379'
+    subdirs = models.CharField(max_length=204800)
+    files = models.CharField(max_length=204800)
+
+
 class FileObject(models.Model):
     # 文件尺寸
     size = models.IntegerField()
@@ -34,7 +48,8 @@ class FileObject(models.Model):
 
 
 class Share(models.Model):
-    file = models.ForeignKey('File')
+    target = models.IntegerField()
+    kind = models.CharField(max_length=10)  # directory/file
     # 提取码，当为None时，表示是匿名下载
     code = models.CharField(max_length=8, null=True)
     # 该共享的失效时间
