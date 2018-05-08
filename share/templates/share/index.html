@@ -11,4 +11,18 @@
 <a href="{% url 'share:shares' %}">共享列表</a>
 </div>
 
+<ul>
+  {% for dir in dirs %}
+  <li>
+  {{ dir.name}}
+  </li>
+  {% endfor %}
+
+  {% for file in files %}
+  <li>
+  {{ file.name }}
+  </li>
+  {% endfor %}
+</ul>
+
 {% endblock %}

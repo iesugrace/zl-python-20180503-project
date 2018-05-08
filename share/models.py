@@ -1,17 +1,12 @@
 from django.db import models
-
-
-class User(models.Model):
-    name = models.CharField(max_length=12)
-    # 密码是40个字符的原始密码的sha1校验和
-    password = models.CharField(max_length=40)
+from django.contrib.auth.models import User
 
 
 class File(models.Model):
     # 文件名字
     name = models.CharField(max_length=256)
     # 上传者/拥有者
-    owner = models.ForeignKey('User')
+    owner = models.ForeignKey(User)
     # 后面的文件对象
     fo = models.ForeignKey('FileObject')
 
@@ -20,7 +15,7 @@ class Directory(models.Model):
     # 目录名字
     name = models.CharField(max_length=256)
     # 上传者/拥有者
-    owner = models.ForeignKey('User')
+    owner = models.ForeignKey(User)
     # 所属的父目录
     parent = models.ForeignKey('Directory', null=True)
     # 下一级节点

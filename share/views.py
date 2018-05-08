@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 
 from .forms import LoginForm
+from .models import Directory, File
 
 
 @login_required
@@ -13,7 +14,19 @@ def index(request):
     """
     用户主页，显示用户资源的相关链接：文件，共享。
     """
-    return render(request, 'share/index.html')
+    user = request.user
+    home = Directory.objects.get(name=user.username, owner=user)
+    dirs = records_from_ids(home.subdirs)
+    files = records_from_ids(home.files, model=File)
+    context = {'dirs': dirs, 'files': files}
+    return render(request, 'share/index.html', context=context)
+
+
+def records_from_ids(ids, model=Directory):
+    # ids format: :id1:id2:id3
+    # 每一个id的前面都有一个冒号
+    ids = [int(id) for id in ids.strip(':').split(':')]
+    return model.objects.filter(pk__in=ids).order_by('name')
 
 
 @login_required
