@@ -1,5 +1,10 @@
+import os
+import re
+
+import magic
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
 
 
 class File(models.Model):
@@ -66,6 +71,38 @@ class FileObject(models.Model):
     finished = models.BooleanField(default=False)
     # 文件的链接数（类似文件系统的硬链接）
     links = models.IntegerField(default=1)
+
+    def mimetype(self):
+        """
+        检测文件类型，检测以下类型，返回相应的字符串：
+            image: image/*
+            audio: audio/*
+            video: video/*
+            text: text/*
+            pdf: application/pdf
+            gzip: application/gzip
+            bzip2: application/x-bzip2
+            zip: application/zip
+            tar: application/x-tar
+            octet: all others
+        """
+        maps = [('image', r'^image/.*'),
+                ('audio', r'^audio/.*'),
+                ('video', r'^video/.*'),
+                ('text', r'^text/.*'),
+                ('pdf', r'^application/pdf$'),
+                ('gzip', r'^application/gzip$'),
+                ('bzip2', r'^application/x-bzip2$'),
+                ('zip', r'^application/zip$'),
+                ('tar', r'^application/x-tar$')]
+        mime = magic.Magic(mime=True)
+        path = os.path.join(settings.MEDIA_ROOT, self.path)
+        type_text = mime.from_file(path)
+        m = [name for name, pat in maps if re.match(pat, type_text)]
+        if m:
+            return m[0]
+        else:
+            return 'octet'
 
 
 class Share(models.Model):

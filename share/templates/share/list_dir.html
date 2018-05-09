@@ -1,0 +1,43 @@
+{% extends "share/base.html" %}
+{% load static %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+
+<div class="nav">
+文件类表 |
+<a href="{% url 'share:shares' %}">共享列表</a>
+</div>
+
+<div class="path">
+  {% for parent in parents %}
+    {% if forloop.last %}
+    <span>/ {{ parent.name }}</span>
+    {% else %}
+    <span>/ <a href="{% url 'share:list_dir' parent.pk %}">{{ parent.name }}</a></span>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<hr>
+
+<table>
+  {% for dir in dirs %}
+  <tr>
+    <td><img src="{% static 'share/icons/dir.png' %}"></td>
+    <td><a href="{% url 'share:list_dir' dir.pk %}">{{ dir.name }}</a></td>
+  </tr>
+  {% endfor %}
+
+  {% for file in files %}
+  <tr>
+    <td><img src="{% static 'share/icons' %}/{{ file.fo.mimetype }}.png"></td>
+    <td>{{ file.name }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

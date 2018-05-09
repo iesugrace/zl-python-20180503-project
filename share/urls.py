@@ -7,6 +7,6 @@ urlpatterns = [
     url(r'^login/$', views.login, name='login'),
     url(r'^logout/$', views.logout, name='logout'),
     url(r'^signup/$', views.signup, name='signup'),
-    url(r'^files/(?:(?P<dir>[0-9a-z]+)/)?$', views.list_files, name='files'),
+    url(r'^list/(?:(?P<dir>[0-9a-z]+)/)?$', views.list_dir, name='list_dir'),
     url(r'^shares/', views.list_shares, name='shares'),
 ]

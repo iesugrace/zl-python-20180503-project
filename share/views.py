@@ -16,23 +16,40 @@ def index(request):
     """
     user = request.user
     home = Directory.objects.get(name=user.username, owner=user)
-    dirs = records_from_ids(home.subdirs)
-    files = records_from_ids(home.files, model=File)
-    context = {'dirs': dirs, 'files': files}
-    return render(request, 'share/index.html', context=context)
+    dirs, files, parents = get_items(home)
+    context = {'dirs': dirs, 'files': files, 'parents': parents}
+    return render(request, 'share/list_dir.html', context=context)
+
+
+def get_items(dir):
+    # 列出目錄下的內容，就是子目錄和文件，同時返回所有父目錄
+    dirs = records_from_ids(dir.subdirs)
+    files = records_from_ids(dir.files, model=File)
+    parents = [dir]
+    while dir.parent:
+        parents.append(dir.parent)
+        dir = dir.parent
+    parents = parents[::-1]
+    return dirs, files, parents
 
 
 def records_from_ids(ids, model=Directory):
     # ids format: :id1:id2:id3
     # 每一个id的前面都有一个冒号
+    if not ids:
+        return []
     ids = [int(id) for id in ids.strip(':').split(':')]
     return model.objects.filter(pk__in=ids).order_by('name')
 
 
 @login_required
-def list_files(request, dir=None):
+def list_dir(request, dir=None):
     """查看目录下的文件"""
-    return render(request, 'share/list_files.html')
+    user = request.user
+    dir = Directory.objects.get(pk=dir, owner=user)
+    dirs, files, parents = get_items(dir)
+    context = {'dirs': dirs, 'files': files, 'parents': parents}
+    return render(request, 'share/list_dir.html', context=context)
 
 
 @login_required
