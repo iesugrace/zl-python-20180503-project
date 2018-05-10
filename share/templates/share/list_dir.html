@@ -33,6 +33,8 @@
     <td class="time">{{ dir.object.time|date:"Y-m-d H:m" }}</td>
     <td class="operation">
       <a href="{% url 'share:detail' dir.pk %}">detail</a> |
+      <a href="{% url 'share:view' dir.pk %}">view</a> |
+      <a href="{% url 'share:download' dir.pk %}">download</a> |
       <a href="{% url 'share:edit' dir.pk %}">edit</a> |
       <a href="{% url 'share:share' dir.pk %}">share</a> |
       <a href="{% url 'share:delete' dir.pk %}">delete</a>
@@ -48,6 +50,8 @@
     <td class="time">{{ file.object.time|date:"Y-m-d H:m" }}</td>
     <td class="operation">
       <a href="{% url 'share:detail' file.pk %}">detail</a> |
+      <a href="{% url 'share:view' file.pk %}">view</a> |
+      <a href="{% url 'share:download' file.pk %}">download</a> |
       <a href="{% url 'share:edit' file.pk %}">edit</a> |
       <a href="{% url 'share:share' file.pk %}">share</a> |
       <a href="{% url 'share:delete' file.pk %}">delete</a>

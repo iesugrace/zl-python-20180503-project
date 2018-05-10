@@ -1,9 +1,13 @@
+import os
+
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-from django.http import HttpResponseRedirect
+from django.http import (HttpResponseRedirect,
+                         StreamingHttpResponse, HttpResponseBadRequest)
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
+from django.conf import settings
 
 from .forms import LoginForm, RenameForm
 from .models import DirectoryFile, RegularFile, File
@@ -58,6 +62,35 @@ def detail(request, pk):
     """查看文件详情"""
     file = get_object_or_404(File, pk=pk)
     return render(request, 'share/detail.html', context={'file': file})
+
+
+@login_required
+def view(request, pk):
+    """查看文件内容"""
+    file = get_object_or_404(File, pk=pk)
+    if file.is_viewable():
+        abspath = os.path.join(settings.MEDIA_ROOT, file.object.path)
+        buf = open(abspath, 'rb')
+        response = StreamingHttpResponse(buf)
+        response['Content-Type'] = file.raw_mimetype()
+        return response
+    else:
+        return render(request, 'share/view.html', context={'file': file})
+
+
+@login_required
+def download(request, pk):
+    """下载文件"""
+    file = get_object_or_404(File, pk=pk)
+    if not file.is_regular:
+        return HttpResponseBadRequest("can only download a regular file")
+
+    abspath = os.path.join(settings.MEDIA_ROOT, file.object.path)
+    buf = open(abspath, 'rb')
+    response = StreamingHttpResponse(buf)
+    response['Content-Type'] = 'application/octet-stream'
+    response['Content-Disposition'] = 'attachment;filename="%s"' % file.name
+    return response
 
 
 @login_required

@@ -73,14 +73,20 @@ class File(models.Model):
                 ('bzip2', r'^application/x-bzip2$'),
                 ('zip', r'^application/zip$'),
                 ('tar', r'^application/x-tar$')]
-        mime = magic.Magic(mime=True)
-        path = os.path.join(settings.MEDIA_ROOT, self.object.path)
-        type_text = mime.from_file(path)
+        type_text = self.raw_mimetype()
         m = [name for name, pat in maps if re.match(pat, type_text)]
         if m:
             return m[0]
         else:
             return 'octet'
+
+    def raw_mimetype(self):
+        mime = magic.Magic(mime=True)
+        path = os.path.join(settings.MEDIA_ROOT, self.object.path)
+        return mime.from_file(path)
+
+    def is_viewable(self):
+        return self.mimetype() in ['pdf', 'text']
 
 
 class DirectoryFile(models.Model):
