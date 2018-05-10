@@ -8,6 +8,7 @@ urlpatterns = [
     url(r'^logout/$', views.logout, name='logout'),
     url(r'^signup/$', views.signup, name='signup'),
     url(r'^list/(?:(?P<dir>[0-9a-z]+)/)?$', views.list_dir, name='list_dir'),
+    url(r'^detail/(?P<pk>[0-9]+)/$', views.detail, name='detail'),
     url(r'^shares/', views.list_shares, name='shares'),
     url(r'^edit/(?P<pk>[0-9]+)/$', views.edit, name='edit'),
     url(r'^share/(?P<pk>[0-9]+)/$', views.share, name='share'),

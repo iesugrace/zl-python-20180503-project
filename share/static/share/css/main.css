@@ -6,7 +6,21 @@ div.path {
   margin-bottom: .5em;
 }
 
-.operation {
+.size, .time, .operation {
   font-variant-caps: small-caps;
   padding-left: .5em;
+}
+
+a {
+  text-decoration: none;
+  color: blue;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a:active {
+  text-decoration: underline;
+  color: red;
 }

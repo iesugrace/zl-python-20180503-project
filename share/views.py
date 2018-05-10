@@ -5,7 +5,7 @@ from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 
-from .forms import LoginForm
+from .forms import LoginForm, RenameForm
 from .models import DirectoryFile, RegularFile, File
 
 
@@ -54,6 +54,13 @@ def list_dir(request, dir=None):
 
 
 @login_required
+def detail(request, pk):
+    """查看文件详情"""
+    file = get_object_or_404(File, pk=pk)
+    return render(request, 'share/detail.html', context={'file': file})
+
+
+@login_required
 def list_shares(request):
     """查看所有的共享"""
     return render(request, 'share/list_shares.html')
@@ -62,7 +69,17 @@ def list_shares(request):
 @login_required
 def edit(request, pk):
     """修改文件"""
-    return render(request, 'share/edit.html')
+    file = get_object_or_404(File, pk=pk)
+    if request.method == 'POST':
+        form = RenameForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            file.name = name
+            file.save()
+            return HttpResponseRedirect(reverse('share:detail', args=(pk,)))
+    else:
+        form = RenameForm({'name': file.name})
+    return render(request, 'share/edit.html', context={'form': form})
 
 
 @login_required

@@ -29,9 +29,10 @@
   <tr>
     <td><img src="{% static 'share/icons/dir.png' %}"></td>
     <td><a href="{% url 'share:list_dir' dir.pk %}">{{ dir.name }}</a></td>
-    <td>{{ dir.object.size }}</td>
-    <td>{{ dir.object.time|date:"Y-m-d H:m" }}</td>
+    <td class="size">{{ dir.object.size }}</td>
+    <td class="time">{{ dir.object.time|date:"Y-m-d H:m" }}</td>
     <td class="operation">
+      <a href="{% url 'share:detail' dir.pk %}">detail</a> |
       <a href="{% url 'share:edit' dir.pk %}">edit</a> |
       <a href="{% url 'share:share' dir.pk %}">share</a> |
       <a href="{% url 'share:delete' dir.pk %}">delete</a>
@@ -42,10 +43,11 @@
   {% for file in files %}
   <tr>
     <td><img src="{% static 'share/icons' %}/{{ file.mimetype }}.png"></td>
-    <td>{{ file.name }}</td>
-    <td>{{ file.object.size }}</td>
-    <td>{{ file.object.time|date:"Y-m-d H:m" }}</td>
+    <td><a href="{% url 'share:detail' file.pk %}">{{ file.name }}</a></td>
+    <td class="size">{{ file.object.size }}</td>
+    <td class="time">{{ file.object.time|date:"Y-m-d H:m" }}</td>
     <td class="operation">
+      <a href="{% url 'share:detail' file.pk %}">detail</a> |
       <a href="{% url 'share:edit' file.pk %}">edit</a> |
       <a href="{% url 'share:share' file.pk %}">share</a> |
       <a href="{% url 'share:delete' file.pk %}">delete</a>
