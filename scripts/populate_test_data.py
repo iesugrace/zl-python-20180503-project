@@ -86,7 +86,7 @@ def get_abspath(name):
 
 
 def get_size(path):
-    return os.path.getsize('/bin/bash')
+    return os.path.getsize(path)
 
 
 def make_time():
