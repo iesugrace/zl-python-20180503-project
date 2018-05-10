@@ -8,26 +8,26 @@
 
 /
 ├── alice
-│   ├── data            <-- 提取码共享整个目录
-│   │   └── video
-│   │       └── rm
-│   ├── cp              <-- 匿名共享
-│   ├── ls              <-- 提取码共享
-│   └── mv              <-- 不共享
+│   ├── multimedia      <-- 提取码共享整个目录
+│   │   ├── anv
+│   │   │   ├── genesis.mp3
+│   │   │   └── goodday.mp4
+│   │   └── earth.png
+│   ├── calculus.pdf    <-- 提取码共享
+│   ├── data.tar
+│   ├── data.tar.bz2
+│   ├── data.tar.gz
+│   ├── data.zip
+│   ├── info.bin
+│   └── license.txt     <-- 匿名共享
 ├── bob
-│   ├── data            <-- 提取码共享整个目录
-│   │   └── video
-│   │       └── cat
-│   ├── cut             <-- 匿名共享
-│   ├── head            <-- 提取码共享
-│   └── tail            <-- 不共享
+│   ├── ...
+│   ...
+│   ...
 └── charlie
-    ├── data            <-- 提取码共享整个目录
-    │   └── video
-    │       └── grep
-    ├── awk             <-- 匿名共享
-    ├── sed             <-- 提取码共享
-    └── sort            <-- 不共享
+    ├── ...
+    ...
+    ...
 
 """
 
@@ -37,7 +37,6 @@ import sys
 import hashlib
 import random
 from datetime import timedelta
-import subprocess as sub
 
 import django
 from django.utils import timezone
@@ -49,7 +48,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'pro1.settings'
 django.setup()
 
 from django.contrib.auth.models import User
-from share.models import File, Directory, FileObject, Share
+from share.models import RegularFile, DirectoryFile, File, Share
 
 
 def digest(text=None, bytes=None, buffer=None, path=None):
@@ -80,8 +79,10 @@ def gen_code():
     return ''.join(picked)
 
 
-def which(name):
-    return sub.getoutput('which %s' % name)
+def get_abspath(name):
+    dir = dirname(abspath(__file__))
+    path = os.path.join(dir, 'test_files', name)
+    return path
 
 
 def get_size(path):
@@ -96,69 +97,80 @@ def make_path(time, digest):
     return os.path.join(time.strftime('%Y%m%d'), digest)
 
 
+def create_directory(name, owner):
+    fo = DirectoryFile.objects.create()
+    dir = File.objects.create(name=name, owner=owner, is_regular=False, object_pk=fo.pk)
+    return dir
+
+
+# 创建数据库记录：用户，文件，文件对象，目录，共享
+def work():
+    for user in users:
+        print('creating user %s' % user['name'])
+        u = User(username=user['name'])
+        u.set_password(user['password'])
+        u.save()
+
+        # 创建目录home/multimedia/anv
+        print('creating Directories')
+        home = create_directory(user['name'], u)
+        multimedia_dir = create_directory('multimedia', u)
+        anv_dir = create_directory('anv', u)
+        home.add(multimedia_dir)
+        multimedia_dir.add(anv_dir)
+
+        # 共享multimedia目录
+        Share.objects.create(target=multimedia_dir, code=gen_code(),
+                             expire=timezone.now()+timedelta(days=12))
+
+        for i, name in enumerate(files):
+            abspath = get_abspath(name)
+            size = get_size(abspath)
+            time = make_time()
+            sha1 = digest(abspath)
+            store_path = make_path(time, sha1)
+
+            print('creating RegularFile record for %s' % name)
+            fo = RegularFile.objects.create(
+                        size=size, received=size, time=time, digest=sha1,
+                        path=store_path, finished=True, links=1
+                        )
+
+            print('creating File record for %s' % name)
+            file = File.objects.create(name=name, owner=u, object_pk=fo.pk)
+            if name in ['genesis.mp3', 'goodday.mp4']:
+                anv_dir.add(file)
+            elif name == 'earth.png':
+                multimedia_dir.add(file)
+            else:
+                home.add(file)
+
+            print('creating Share record for %s' % name)
+            if name == 'license.txt':  # 创建匿名共享
+                Share.objects.create(target=file,
+                                     expire=timezone.now()+timedelta(days=10+i))
+            elif name == 'calculus.pdf':    # 提取码共享
+                Share.objects.create(target=file, code=gen_code(),
+                                     expire=timezone.now()+timedelta(days=10+i))
+
+            print('copying file %s' % abspath)
+            dst = os.path.join(media_dir, store_path)
+            dst_dir = os.path.dirname(dst)
+            os.makedirs(dst_dir, mode=0o755, exist_ok=True)
+            os.system('cp -v %s %s' % (abspath, dst))
+
+
 users = [
     {'name': 'alice', 'password': 'abcd/1234'},
     {'name': 'bob', 'password': 'abcd/1234'},
     {'name': 'charlie', 'password': 'abcd/1234'},
 ]
 
-files = ['rm', 'cp', 'ls', 'mv', 'cat', 'cut', 'head',
-         'tail', 'grep', 'awk', 'sed', 'sort']
+files = ['calculus.pdf', 'data.tar', 'data.tar.bz2', 'data.tar.gz', 'data.zip',
+         'earth.png', 'genesis.mp3', 'goodday.mp4', 'info.bin', 'license.txt']
 
 media_dir = os.path.join(basedir, 'media')
 
-# 创建数据库记录：用户，文件，文件对象，目录，共享
-for user in users:
-    print('creating user %s' % user['name'])
-    u = User(username=user['name'])
-    u.set_password(user['password'])
-    u.save()
 
-    # 创建目录home/data/video
-    print('creating Directories')
-    home = Directory.objects.create(name=user['name'], owner=u)
-    data_dir = Directory.objects.create(name='data', owner=u, parent=home)
-    video_dir = Directory.objects.create(name='video', owner=u, parent=data_dir)
-    home.add(data_dir)
-    data_dir.add(video_dir)
-
-    # 共享data目录
-    Share.objects.create(target=data_dir.pk, kind='directory', code=gen_code(),
-                         expire=timezone.now()+timedelta(days=12))
-
-    file_names = files[:4]
-    files = files[4:]
-    for i, name in enumerate(file_names):
-        abspath = which(name)
-        size = get_size(abspath)
-        time = make_time()
-        sha1 = digest(abspath)
-        store_path = make_path(time, sha1)
-
-        print('creating FileObject record for %s' % name)
-        fo = FileObject.objects.create(
-                size=size, received=size, time=time, digest=sha1,
-                path=store_path, finished=True, links=1)
-
-        print('creating File record for %s' % name)
-        file = File.objects.create(name=name, owner=u, fo=fo)
-
-        print('creating Share record for %s' % name)
-        if i == 1:  # 创建匿名共享
-            Share.objects.create(target=file.pk, kind='file',
-                                 expire=timezone.now()+timedelta(days=10+i))
-        elif i == 2:    # 提取码共享
-            Share.objects.create(target=file.pk, kind='file', code=gen_code(),
-                                 expire=timezone.now()+timedelta(days=10+i))
-
-        # 把第一个文件放到video中，其它的放到home中
-        if i == 0:
-            video_dir.add(file)
-        else:
-            home.add(file)
-
-        print('copying file %s' % abspath)
-        dst = os.path.join(media_dir, store_path)
-        dst_dir = os.path.dirname(dst)
-        os.makedirs(dst_dir, mode=0o755, exist_ok=True)
-        os.system('cp -v %s %s' % (abspath, dst))
+if __name__ == '__main__':
+    work()

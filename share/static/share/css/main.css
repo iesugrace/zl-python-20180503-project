@@ -5,3 +5,8 @@
 div.path {
   margin-bottom: .5em;
 }
+
+.operation {
+  font-variant-caps: small-caps;
+  padding-left: .5em;
+}
