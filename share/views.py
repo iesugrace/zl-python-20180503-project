@@ -2,8 +2,8 @@ import os
 
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-from django.http import (HttpResponseRedirect,
-                         StreamingHttpResponse, HttpResponseBadRequest)
+from django.http import (HttpResponseRedirect, StreamingHttpResponse,
+                         HttpResponseBadRequest)
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
@@ -11,6 +11,7 @@ from django.conf import settings
 
 from .forms import LoginForm, RenameForm
 from .models import DirectoryFile, RegularFile, File
+from .libs import make_abspath
 
 
 @login_required
@@ -69,7 +70,7 @@ def view(request, pk):
     """查看文件内容"""
     file = get_object_or_404(File, pk=pk)
     if file.is_viewable():
-        abspath = os.path.join(settings.MEDIA_ROOT, file.object.path)
+        abspath = make_abspath(file.object.path)
         buf = open(abspath, 'rb')
         response = StreamingHttpResponse(buf)
         response['Content-Type'] = file.raw_mimetype()
@@ -83,9 +84,9 @@ def download(request, pk):
     """下载文件"""
     file = get_object_or_404(File, pk=pk)
     if not file.is_regular:
-        return HttpResponseBadRequest("can only download a regular file")
+        return HttpResponseBadRequest("Only a regular file can be downloaded.")
 
-    abspath = os.path.join(settings.MEDIA_ROOT, file.object.path)
+    abspath = make_abspath(file.object.path)
     buf = open(abspath, 'rb')
     response = StreamingHttpResponse(buf)
     response['Content-Type'] = 'application/octet-stream'
@@ -124,7 +125,18 @@ def share(request, pk):
 @login_required
 def delete(request, pk):
     """删除文件"""
-    return render(request, 'share/delete.html')
+    file = get_object_or_404(File, pk=pk)
+    if not file.is_regular:
+        return HttpResponseBadRequest("Only a regular file can be deleted.")
+
+    if request.method == 'POST':
+        if request.POST.get('submit', '') == 'Delete':
+            file.unlink()
+            next_url = request.POST['next']
+            return HttpResponseRedirect(next_url)
+    next_url = request.META['HTTP_REFERER']
+    context={'file': file, 'next': next_url}
+    return render(request, 'share/delete.html', context=context)
 
 
 def login(request):
