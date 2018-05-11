@@ -5,6 +5,9 @@ import magic
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.db.models import F
+
+from .libs import make_abspath
 
 
 class File(models.Model):
@@ -17,7 +20,7 @@ class File(models.Model):
 
     # 后面的文件对象，通过property的方法根据文件类型，
     # 指向文件对象或目录对象
-    object_pk = models.IntegerField()
+    object_pk = models.IntegerField(null=True)
     is_regular = models.BooleanField(default=True)  # directory/file
 
     @property
@@ -26,6 +29,30 @@ class File(models.Model):
             return RegularFile.objects.get(pk=self.object_pk)
         else:
             return DirectoryFile.objects.get(pk=self.object_pk)
+
+    def link(self, fo):
+        """建立File与RegularFile/DirectoryFile之间的链接"""
+        self.object_pk = fo.pk
+        if isinstance(fo, RegularFile):
+            fo.links += 1
+            fo.save()
+        self.save()
+
+    def unlink(self):
+        # 如果是最后一个指向文件的名字，则可以删除文件系统上的文件
+        assert self.is_regular, "only support regular file deletion"
+        fo = self.object
+        if fo.links == 1:
+            abspath = make_abspath(fo.path)
+            try:
+                os.remove(abspath)
+            except FileNotFoundError:
+                ...
+            fo.delete()
+        else:
+            fo.links = F('links') - 1
+            fo.save()
+        self.delete()
 
     def add(self, other):
         """往目录中添加子目录或常规文件"""
@@ -113,7 +140,7 @@ class RegularFile(models.Model):
     # 文件上传是否完成
     finished = models.BooleanField(default=False)
     # 文件的链接数（类似文件系统的硬链接）
-    links = models.IntegerField(default=1)
+    links = models.IntegerField(default=0)
 
 
 class Share(models.Model):

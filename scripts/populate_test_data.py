@@ -99,7 +99,8 @@ def make_path(time, digest):
 
 def create_directory(name, owner):
     fo = DirectoryFile.objects.create()
-    dir = File.objects.create(name=name, owner=owner, is_regular=False, object_pk=fo.pk)
+    dir = File.objects.create(name=name, owner=owner, is_regular=False)
+    dir.link(fo)
     return dir
 
 
@@ -133,11 +134,11 @@ def work():
             print('creating RegularFile record for %s' % name)
             fo = RegularFile.objects.create(
                         size=size, received=size, time=time, digest=sha1,
-                        path=store_path, finished=True, links=1
-                        )
+                        path=store_path, finished=True)
 
             print('creating File record for %s' % name)
-            file = File.objects.create(name=name, owner=u, object_pk=fo.pk)
+            file = File.objects.create(name=name, owner=u)
+            file.link(fo)
             if name in ['genesis.mp3', 'goodday.mp4']:
                 anv_dir.add(file)
             elif name == 'earth.png':
