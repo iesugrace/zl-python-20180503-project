@@ -8,10 +8,11 @@ from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
-from .forms import LoginForm, RenameForm
-from .models import DirectoryFile, RegularFile, File
-from .libs import make_abspath
+from .forms import LoginForm, RenameForm, ShareForm
+from .models import DirectoryFile, RegularFile, File, Share
+from .libs import make_abspath, gen_code
 
 
 @login_required
@@ -119,7 +120,37 @@ def edit(request, pk):
 @login_required
 def share(request, pk):
     """共享文件"""
-    return render(request, 'share/share.html')
+    file = get_object_or_404(File, pk=pk)
+    if request.method == 'POST':
+        form = ShareForm(request.POST)
+        form.errors.clear()
+        try:
+            if 'anonymous' in request.POST:
+                code = None
+            else:
+                code = form['code'].field.clean(request.POST['code'])
+        except ValidationError as e:
+            form.add_error('code', e)
+        try:
+            if 'never_expire' in request.POST:
+                expire = None
+            else:
+                expire = form['expire'].field.clean(request.POST['expire'])
+        except ValidationError as e:
+            form.add_error('expire', e)
+
+        if not form.errors:
+            Share.objects.create(target=file, code=code, expire=expire)
+            url = reverse('share:detail', args=(pk,))
+            return HttpResponseRedirect(url)
+
+        form['code'].field.disabled = 'anonymous' in request.POST
+        form['expire'].field.disabled = 'never_expire' in request.POST
+    else:
+        form = ShareForm(initial={'code': gen_code()})
+
+    context={'file': file, 'form': form}
+    return render(request, 'share/share.html', context=context)
 
 
 @login_required

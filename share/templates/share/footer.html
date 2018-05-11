@@ -1,2 +1,23 @@
+{% load static %}
 <hr></hr>
 <h4>webmaster: admin@share.com</h4>
+
+<script type="text/javascript" src="{% static 'share/js/jquery.min.js' %}"></script>
+{% block extjs %}
+<script>
+$(function(){
+    $('#id_anonymous').click(function() {
+      if (this.checked)
+        $('#id_code').prop('disabled', true);
+      else
+        $('#id_code').prop('disabled', false);
+      });
+    $('#id_never_expire').click(function() {
+      if (this.checked)
+        $('#id_expire').prop('disabled', true);
+      else
+        $('#id_expire').prop('disabled', false);
+      });
+});
+</script>
+{% endblock %}

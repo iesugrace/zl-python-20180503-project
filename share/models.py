@@ -6,6 +6,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.db.models import F
+from django.utils import timezone
 
 from .libs import make_abspath
 
@@ -115,6 +116,35 @@ class File(models.Model):
     def is_viewable(self):
         return self.mimetype() in ['pdf', 'text']
 
+    def shared_status(self):
+        """根据文件的共享状态返回字符串"""
+
+        def _status(node, where='self'):
+            status = []
+            shares = [x for x in node.share_set.all() if not x.is_expired()]
+            for share in shares:
+                if share.code is None:
+                    status.append('anonymous/%s' % where)
+                else:
+                    status.append('%s/%s' % (share.code, where))
+            return ', '.join(status)
+
+        # 查找文件本身的共享信息
+        status = _status(self)
+        if status:
+            return status
+
+        # 查找所有的父目录的共享信息
+        node = self
+        while node.parent:
+            parent = node.parent
+            node = parent
+            status = _status(node, 'parent')
+            if status:
+                return status
+
+        return 'private'
+
 
 class DirectoryFile(models.Model):
     # 下一级节点，子目录/文件的表示法：':123:34567:15379'
@@ -148,4 +178,7 @@ class Share(models.Model):
     # 提取码，当为None时，表示是匿名下载
     code = models.CharField(max_length=8, null=True)
     # 该共享的失效时间
-    expire = models.DateTimeField()
+    expire = models.DateTimeField(null=True)
+
+    def is_expired(self):
+        return self.expire is not None and self.expire <= timezone.now()

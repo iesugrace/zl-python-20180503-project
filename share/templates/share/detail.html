@@ -18,5 +18,6 @@
   <tr><td>Subdirs:</td><td>{{ file.object.subdirs|countsub }}</td></tr>
   <tr><td>Files:</td><td>{{ file.object.files|countsub }}</td></tr>
 {% endif %}
+  <tr><td>Share:</td><td>{{ file.shared_status }}</td></tr>
 </table>
 {% endblock %}
