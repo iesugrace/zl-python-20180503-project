@@ -1,8 +1,11 @@
 import os
 import re
+import hashlib
 from io import BytesIO
+from tempfile import NamedTemporaryFile
 
 from django.shortcuts import render, get_object_or_404
+from django import urls
 from django.urls import reverse
 from django.http import (HttpResponseRedirect, StreamingHttpResponse,
                          HttpResponseBadRequest, HttpResponse)
@@ -15,12 +18,13 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-from .forms import LoginForm, RenameForm, ShareForm
+from .forms import LoginForm, RenameForm, ShareForm, UploadForm
 from .models import DirectoryFile, RegularFile, File, Share
 from .libs import make_abspath, gen_code
 from .views_libs import (create_directory, get_session_id,
                          get_session_data, set_session_data,
-                         share_approved, permission_ok, make_image, gentext)
+                         share_approved, permission_ok, make_image, gentext,
+                         make_path)
 
 
 @login_required
@@ -399,3 +403,58 @@ def search(request):
     context = {'files': files, 'title': 'Search result',
                'pattern': pattern, 'qs': qs}
     return render(request, 'share/search.html', context=context)
+
+
+@login_required
+def upload(request):
+    if request.method == 'POST':
+        form = UploadForm(request.POST, request.FILES)
+        next_url = request.POST['next']
+        if form.is_valid():
+            pk = urls.resolve(next_url).kwargs['pk']
+            user = request.user
+            dir = get_object_or_404(File, pk=pk, owner=user)
+            files = request.FILES.getlist('files')
+            for file in files:
+                handle_uploaded_file(file, user, dir)
+            return HttpResponseRedirect(next_url)
+    else:
+        form = UploadForm()
+        try:
+            next_url = request.META['HTTP_REFERER']
+        except KeyError:
+            return HttpResponseBadRequest("HTTP_REFERER info is required.")
+        next_url = '/' + '/'.join(next_url.split('/')[3:])
+    context = {'form': form, 'title': 'Upload files', 'next': next_url}
+    return render(request, 'share/upload.html', context=context)
+
+
+def handle_uploaded_file(ufile, owner, dir):
+    time = timezone.now()
+    store_dir = make_path(time)
+    store_dir = os.path.join(settings.MEDIA_ROOT, store_dir)
+    os.makedirs(store_dir, mode=0o755, exist_ok=True)
+    tmpfile = NamedTemporaryFile(dir=store_dir, delete=False)
+
+    # 接收数据
+    fo = RegularFile.objects.create(size=0, received=0, digest='',
+                                     path=tmpfile.name, finished=False)
+    read = 0
+    hash = hashlib.sha1()
+    for chunk in ufile.chunks(chunk_size=512):
+        tmpfile.write(chunk)
+        hash.update(chunk)
+        read += len(chunk)
+        fo.received = read
+    fo.size = read
+    fo.digest = hash.hexdigest()
+    fo.path = make_path(time, fo.digest)
+    fo.finished = True
+    abspath = os.path.join(settings.MEDIA_ROOT, fo.path)
+    os.rename(tmpfile.name, abspath)
+    fo.save()
+
+    # 链接，加入目录
+    file = File.objects.create(name=ufile.name, owner=owner)
+    file.link(fo)
+    dir.add(file)

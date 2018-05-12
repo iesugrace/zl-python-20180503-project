@@ -11,6 +11,8 @@
     <span>/ <a href="{% url 'share:list_dir' parent.pk %}">{{ parent.name }}</a></span>
     {% endif %}
   {% endfor %}
+
+  | <a href="{% url 'share:upload' %}">upload</a>
 </div>
 
 <hr>

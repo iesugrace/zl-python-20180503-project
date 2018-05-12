@@ -16,3 +16,7 @@ class ShareForm(forms.Form):
     expire = forms.DateTimeField(required=False, disabled=True)
     anonymous = forms.BooleanField(required=False)
     never_expire = forms.BooleanField(required=False, initial=True)
+
+
+class UploadForm(forms.Form):
+    files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}))

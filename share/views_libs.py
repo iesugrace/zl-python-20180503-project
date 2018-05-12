@@ -76,3 +76,7 @@ def gentext(n):
     """ 生成4个字母的随机字符串 """
     chars = string.ascii_letters
     return ''.join([random.choice(chars) for i in range(n)])
+
+
+def make_path(time, digest=''):
+    return os.path.join(time.strftime('%Y%m%d'), digest)
