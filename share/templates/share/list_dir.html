@@ -21,27 +21,16 @@
 <hr>
 
 <table>
-  {% for dir in dirs %}
-  <tr>
-    <td><img src="{% static 'share/icons/dir.png' %}"></td>
-    <td><a href="{% url 'share:list_dir' dir.pk %}">{{ dir.name }}</a></td>
-    <td class="size">{{ dir.object.size }}</td>
-    <td class="time">{{ dir.object.time|date:"Y-m-d H:m" }}</td>
-    <td class="operation">
-      <a href="{% url 'share:detail' dir.pk %}">detail</a> |
-      <a href="{% url 'share:view' dir.pk %}">view</a> |
-      <a href="{% url 'share:download' dir.pk %}">download</a> |
-      <a href="{% url 'share:edit' dir.pk %}">edit</a> |
-      <a href="{% url 'share:create_share' dir.pk %}">share</a> |
-      <a href="{% url 'share:delete' dir.pk %}">delete</a>
-    </td>
-  </tr>
-  {% endfor %}
-
   {% for file in files %}
   <tr>
     <td><img src="{% static 'share/icons' %}/{{ file.mimetype }}.png"></td>
-    <td><a href="{% url 'share:detail' file.pk %}">{{ file.name }}</a></td>
+    <td>
+      {% if file.is_regular %}
+      <a href="{% url 'share:detail' file.pk %}">{{ file.name }}</a>
+      {% else %}
+      <a href="{% url 'share:list_dir' file.pk %}">{{ file.name }}</a>
+      {% endif %}
+    </td>
     <td class="size">{{ file.object.size }}</td>
     <td class="time">{{ file.object.time|date:"Y-m-d H:m" }}</td>
     <td class="operation">
@@ -56,4 +45,19 @@
   {% endfor %}
 </table>
 
+<div class="pagination">
+    <span class="step-links">
+        {% if files.has_previous %}
+            <a href="{% url 'share:list_dir' files.0.parent.pk files.previous_page_number %}">&lt;&lt;</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ files.number }}/{{ files.paginator.num_pages }}
+        </span>
+
+        {% if files.has_next %}
+            <a href="{% url 'share:list_dir' files.0.parent.pk files.next_page_number %}">&gt;&gt;</a>
+        {% endif %}
+    </span>
+</div>
 {% endblock %}

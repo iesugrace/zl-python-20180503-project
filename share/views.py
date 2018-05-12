@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from .forms import LoginForm, RenameForm, ShareForm
 from .models import DirectoryFile, RegularFile, File, Share
@@ -22,26 +23,25 @@ from .views_libs import (create_directory, get_session_id,
 
 
 @login_required
-def index(request):
+def index(request, page=1):
     """
     用户主页，显示用户资源的相关链接：文件，共享。
     """
     user = request.user
     home = get_object_or_404(File, name=user.username,
                              owner=user, is_regular=False)
-    return list_dir(request, dir=home)
+    return list_dir(request, dir=home, page=page)
 
 
 def get_items(dir):
     # 列出目錄下的內容，就是子目錄和文件，同時返回所有父目錄
-    dirs = records_from_ids(dir.object.subdirs)
-    files = records_from_ids(dir.object.files)
+    files = records_from_ids(dir.object.subdirs + dir.object.files)
     parents = [dir]
     while dir.parent:
         parents.append(dir.parent)
         dir = dir.parent
     parents = parents[::-1]
-    return dirs, files, parents
+    return files, parents
 
 
 def records_from_ids(ids):
@@ -50,21 +50,31 @@ def records_from_ids(ids):
     if not ids:
         return []
     ids = [int(id) for id in ids.strip(':').split(':')]
-    return File.objects.filter(pk__in=ids).order_by('name')
+    return File.objects.filter(pk__in=ids).order_by('is_regular', 'name')
 
 
 @login_required
-def list_dir(request, pk=None, dir=None):
+def list_dir(request, pk=None, dir=None, page=1):
     """查看目录下的文件"""
     assert pk is not None or dir is not None, "pk or dir is required"
     if dir is None:
         user = request.user
         dir = get_object_or_404(File, pk=pk, owner=user)
-    dirs, files, parents = get_items(dir)
-    context = {'dirs': dirs, 'files': files,
-               'parents': parents, 'title': 'File list'}
-    return render(request, 'share/list_dir.html', context=context)
+    files, parents = get_items(dir)
 
+    # 分页
+    paginator = Paginator(files, settings.PAGE_SIZE)
+    try:
+        files = paginator.page(page)
+    except PageNotAnInteger:
+        # 如果page不是整数，就选择第一页
+        files = paginator.page(1)
+    except EmptyPage:
+        # 如果page超出范围，比如说9999, 就选择最后一页
+        files = paginator.page(paginator.num_pages)
+
+    context = {'files': files, 'parents': parents, 'title': 'File list'}
+    return render(request, 'share/list_dir.html', context=context)
 
 @require_POST
 def post_code(request, pk):
@@ -145,13 +155,25 @@ def download(request, pk):
 
 
 @login_required
-def list_shares(request):
+def list_shares(request, page=1):
     """查看所有的共享"""
     user = request.user
     now = timezone.now()
     shares = Share.objects.filter(target__owner=user)
     shares = [x for x in shares if not x.is_expired()]
     shares = sorted(shares, key=(lambda x: x.target.is_regular))
+
+    # 分页
+    paginator = Paginator(shares, settings.PAGE_SIZE)
+    try:
+        shares = paginator.page(page)
+    except PageNotAnInteger:
+        # 如果page不是整数，就选择第一页
+        shares = paginator.page(1)
+    except EmptyPage:
+        # 如果page超出范围，比如说9999, 就选择最后一页
+        shares = paginator.page(paginator.num_pages)
+
     context = {'shares': shares, 'title': 'Share list'}
     return render(request, 'share/list_shares.html', context=context)
 
