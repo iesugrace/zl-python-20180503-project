@@ -29,10 +29,7 @@ def index(request):
     user = request.user
     home = get_object_or_404(File, name=user.username,
                              owner=user, is_regular=False)
-    dirs, files, parents = get_items(home)
-    context = {'dirs': dirs, 'files': files,
-               'parents': parents, 'title': 'File sharing'}
-    return render(request, 'share/list_dir.html', context=context)
+    return list_dir(request, dir=home)
 
 
 def get_items(dir):
@@ -57,10 +54,12 @@ def records_from_ids(ids):
 
 
 @login_required
-def list_dir(request, dir=None):
+def list_dir(request, pk=None, dir=None):
     """查看目录下的文件"""
-    user = request.user
-    dir = get_object_or_404(File, pk=dir, owner=user)
+    assert pk is not None or dir is not None, "pk or dir is required"
+    if dir is None:
+        user = request.user
+        dir = get_object_or_404(File, pk=pk, owner=user)
     dirs, files, parents = get_items(dir)
     context = {'dirs': dirs, 'files': files,
                'parents': parents, 'title': 'File list'}
