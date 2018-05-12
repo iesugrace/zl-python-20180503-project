@@ -1,4 +1,5 @@
 import os
+from io import BytesIO
 
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
@@ -17,7 +18,7 @@ from .models import DirectoryFile, RegularFile, File, Share
 from .libs import make_abspath, gen_code
 from .views_libs import (create_directory, get_session_id,
                          get_session_data, set_session_data,
-                         share_approved, permission_ok)
+                         share_approved, permission_ok, make_image, gentext)
 
 
 @login_required
@@ -296,12 +297,19 @@ def login(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            user = auth.authenticate(username=username, password=password)
-            if user is not None and user.is_active:
-                auth.login(request, user)
-                return HttpResponseRedirect(next_url)
+            # 先对比验证码，在校验用户名字和密码
+            posted_captcha = form.cleaned_data['captcha']
+            saved_captcha = get_session_data(request, 'captcha')
+            if (saved_captcha is not None
+                    and posted_captcha.lower() == saved_captcha):
+                username = form.cleaned_data['username']
+                password = form.cleaned_data['password']
+                user = auth.authenticate(username=username, password=password)
+                if user is not None and user.is_active:
+                    auth.login(request, user)
+                    return HttpResponseRedirect(next_url)
+            else:
+                form.add_error('captcha','验证码不匹配')
     else:
         form = LoginForm()
     context = {'form': form, 'title': 'Login', 'login_page': True}
@@ -328,3 +336,15 @@ def signup(request):
         form = UserCreationForm()
     context = {'form': form, 'title': 'Sign up'}
     return render(request, 'share/signup.html', context=context)
+
+
+def gen_captcha(request):
+    """ 生成验证码图片 """
+    text = gentext(4)
+    # 把验证码内容存到session中
+    set_session_data(request, 'captcha', text.lower())
+    im = make_image(text)
+    imgout = BytesIO()
+    im.save(imgout, format='png')
+    img_bytes = imgout.getvalue()
+    return HttpResponse(img_bytes, content_type='image/png')

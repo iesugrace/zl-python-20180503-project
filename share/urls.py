@@ -18,4 +18,5 @@ urlpatterns = [
     url(r'^share/edit/(?P<pk>[0-9]+)/$', views.edit_share, name='edit_share'),
     url(r'^share/delete/(?P<pk>[0-9]+)/$', views.delete_share, name='delete_share'),
     url(r'^post_code/(?P<pk>[0-9]+)/$', views.post_code, name='post_code'),
+    url(r'^captcha/', views.gen_captcha, name='gen_captcha'),
 ]

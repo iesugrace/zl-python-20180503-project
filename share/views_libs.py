@@ -1,3 +1,8 @@
+import os
+import string
+import random
+
+from PIL import Image, ImageDraw, ImageFont
 from django.conf import settings
 
 from .models import DirectoryFile, File
@@ -47,3 +52,27 @@ def share_approved(request, file):
 def permission_ok(request, file):
     return (request.user.is_authenticated() or file.shared_to_all()
             or (file.shared_with_code() and share_approved(request, file)))
+
+
+def make_image(char):
+    """ 生成验证码图片 """
+    im_size = (70, 40)
+    font_size = 28
+    bg = (0, 0, 0)
+    offset = (1, 1)
+    im = Image.new('RGB', size=im_size, color=bg)
+    font_path_relative = 'share/fonts/ubuntu.ttf'
+    font_path = os.path.join(settings.STATIC_ROOT, font_path_relative)
+    if not os.path.exists(font_path):
+        font_path = os.path.join('share/static', font_path_relative)
+    font = ImageFont.truetype(font_path, font_size)
+    draw = ImageDraw.ImageDraw(im)
+    draw.text(offset, char, fill='yellow', font=font)
+    im = im.transform(im_size, Image.AFFINE, (1, -0.3, 0, -0.1, 1, 0), Image.BILINEAR)
+    return im
+
+
+def gentext(n):
+    """ 生成4个字母的随机字符串 """
+    chars = string.ascii_letters
+    return ''.join([random.choice(chars) for i in range(n)])

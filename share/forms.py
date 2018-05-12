@@ -4,6 +4,7 @@ from django import forms
 class LoginForm(forms.Form):
     username = forms.CharField()
     password = forms.CharField(widget=forms.PasswordInput())
+    captcha = forms.CharField(max_length=12)
 
 
 class RenameForm(forms.Form):
