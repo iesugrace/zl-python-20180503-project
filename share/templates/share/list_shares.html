@@ -1,0 +1,32 @@
+{% extends "share/base.html" %}
+{% load static %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+
+<div class="nav">
+<a href="{% url 'share:index' %}">文件列表</a> |
+共享列表
+</div>
+
+<table>
+  {% for share in shares %}
+  <tr>
+    <td><img src="{% static 'share/icons' %}/{{ share.target.mimetype }}.png"></td>
+    <td>{{ share.target.name }}</td>
+    <td class="code">{{ share.code|default:'[anonymous]' }}</td>
+    <td class="time">{{ share.expire|date:"Y-m-d H:m"|default:'[indefinite]' }}</td>
+    <td class="size">{{ share.target.object.size }}</td>
+    <td class="time">{{ share.target.object.time|date:"Y-m-d H:m" }}</td>
+    <td class="operation">
+      <a href="{% url 'share:edit_share' share.pk %}">edit</a> |
+      <a href="{% url 'share:delete_share' share.pk %}">delete</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

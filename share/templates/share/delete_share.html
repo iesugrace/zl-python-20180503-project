@@ -4,7 +4,7 @@
 {% endblock %}
 
 {% block content %}
-<p>Delete: {{ file_name }}</p>
+<p>Delete share for: {{ file_name }}</p>
 <form method="post">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">

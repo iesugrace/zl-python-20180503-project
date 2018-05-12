@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from .forms import LoginForm, RenameForm, ShareForm
 from .models import DirectoryFile, RegularFile, File, Share
@@ -98,27 +99,17 @@ def download(request, pk):
 @login_required
 def list_shares(request):
     """查看所有的共享"""
-    return render(request, 'share/list_shares.html')
+    user = request.user
+    now = timezone.now()
+    shares = Share.objects.filter(target__owner=user)
+    shares = [x for x in shares if not x.is_expired()]
+    shares = sorted(shares, key=(lambda x: x.target.is_regular))
+    context = {'shares': shares}
+    return render(request, 'share/list_shares.html', context=context)
 
 
 @login_required
-def edit(request, pk):
-    """修改文件"""
-    file = get_object_or_404(File, pk=pk)
-    if request.method == 'POST':
-        form = RenameForm(request.POST)
-        if form.is_valid():
-            name = form.cleaned_data['name']
-            file.name = name
-            file.save()
-            return HttpResponseRedirect(reverse('share:detail', args=(pk,)))
-    else:
-        form = RenameForm({'name': file.name})
-    return render(request, 'share/edit.html', context={'form': form})
-
-
-@login_required
-def share(request, pk):
+def create_share(request, pk):
     """共享文件"""
     file = get_object_or_404(File, pk=pk)
     if request.method == 'POST':
@@ -149,8 +140,83 @@ def share(request, pk):
     else:
         form = ShareForm(initial={'code': gen_code()})
 
-    context={'file': file, 'form': form}
-    return render(request, 'share/share.html', context=context)
+    notice = ('note: if you share a directory, all files under '
+              'the directory tree will be shared.')
+    context={'file_name': file.name, 'form': form, 'notice': notice}
+    return render(request, 'share/create_share.html', context=context)
+
+
+@login_required
+def edit_share(request, pk):
+    """修改共享"""
+    share = get_object_or_404(Share, pk=pk)
+    if request.method == 'POST':
+        form = ShareForm(request.POST)
+        form.errors.clear()
+        try:
+            if 'anonymous' in request.POST:
+                code = None
+            else:
+                code = form['code'].field.clean(request.POST['code'])
+        except ValidationError as e:
+            form.add_error('code', e)
+        try:
+            if 'never_expire' in request.POST:
+                expire = None
+            else:
+                expire = form['expire'].field.clean(request.POST['expire'])
+        except ValidationError as e:
+            form.add_error('expire', e)
+
+        if not form.errors:
+            share.code = code
+            share.expire = expire
+            share.save()
+            next_url = request.POST['next']
+            return HttpResponseRedirect(next_url)
+
+        form['code'].field.disabled = 'anonymous' in request.POST
+        form['expire'].field.disabled = 'never_expire' in request.POST
+    else:
+        init_data = {'code': share.code, 'expire': share.expire,
+                     'anonymous': share.code is None,
+                     'never_expire': share.expire is None}
+        form = ShareForm(initial=init_data)
+        form['code'].field.disabled = init_data['anonymous']
+        form['expire'].field.disabled = init_data['never_expire']
+
+    next_url = request.META['HTTP_REFERER']
+    context={'file_name': share.target.name, 'form': form, 'next': next_url}
+    return render(request, 'share/create_share.html', context=context)
+
+
+@login_required
+def delete_share(request, pk):
+    """删除共享"""
+    share = get_object_or_404(Share, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('submit', '') == 'Delete':
+            share.delete()
+            return HttpResponseRedirect(request.POST['next'])
+    next_url = request.META['HTTP_REFERER']
+    context={'file_name': share.target.name, 'next': next_url}
+    return render(request, 'share/delete_share.html', context=context)
+
+
+@login_required
+def edit(request, pk):
+    """修改文件"""
+    file = get_object_or_404(File, pk=pk)
+    if request.method == 'POST':
+        form = RenameForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            file.name = name
+            file.save()
+            return HttpResponseRedirect(reverse('share:detail', args=(pk,)))
+    else:
+        form = RenameForm({'name': file.name})
+    return render(request, 'share/edit.html', context={'form': form})
 
 
 @login_required
@@ -166,7 +232,7 @@ def delete(request, pk):
             next_url = request.POST['next']
             return HttpResponseRedirect(next_url)
     next_url = request.META['HTTP_REFERER']
-    context={'file': file, 'next': next_url}
+    context={'file_name': file.name, 'next': next_url}
     return render(request, 'share/delete.html', context=context)
 
 

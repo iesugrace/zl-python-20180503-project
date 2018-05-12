@@ -124,7 +124,7 @@ class File(models.Model):
             shares = [x for x in node.share_set.all() if not x.is_expired()]
             for share in shares:
                 if share.code is None:
-                    status.append('anonymous/%s' % where)
+                    status.append('[anonymous]/%s' % where)
                 else:
                     status.append('%s/%s' % (share.code, where))
             return ', '.join(status)

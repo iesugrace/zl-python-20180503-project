@@ -8,8 +8,8 @@
 {% block content %}
 
 <div class="nav">
-文件类表 |
-<a href="{% url 'share:shares' %}">共享列表</a>
+文件列表 |
+<a href="{% url 'share:list_shares' %}">共享列表</a>
 </div>
 
 <div class="path">
@@ -36,7 +36,7 @@
       <a href="{% url 'share:view' dir.pk %}">view</a> |
       <a href="{% url 'share:download' dir.pk %}">download</a> |
       <a href="{% url 'share:edit' dir.pk %}">edit</a> |
-      <a href="{% url 'share:share' dir.pk %}">share</a> |
+      <a href="{% url 'share:create_share' dir.pk %}">share</a> |
       <a href="{% url 'share:delete' dir.pk %}">delete</a>
     </td>
   </tr>
@@ -53,7 +53,7 @@
       <a href="{% url 'share:view' file.pk %}">view</a> |
       <a href="{% url 'share:download' file.pk %}">download</a> |
       <a href="{% url 'share:edit' file.pk %}">edit</a> |
-      <a href="{% url 'share:share' file.pk %}">share</a> |
+      <a href="{% url 'share:create_share' file.pk %}">share</a> |
       <a href="{% url 'share:delete' file.pk %}">delete</a>
     </td>
   </tr>

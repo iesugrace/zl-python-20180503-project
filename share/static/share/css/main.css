@@ -6,9 +6,12 @@ div.path {
   margin-bottom: .5em;
 }
 
-.size, .time, .operation {
-  font-variant-caps: small-caps;
+.code, .size, .time, .operation {
   padding-left: .5em;
+}
+
+.operation {
+  font-variant-caps: small-caps;
 }
 
 a {
