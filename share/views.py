@@ -1,4 +1,5 @@
 import os
+import re
 from io import BytesIO
 
 from django.shortcuts import render, get_object_or_404
@@ -369,3 +370,32 @@ def gen_captcha(request):
     im.save(imgout, format='png')
     img_bytes = imgout.getvalue()
     return HttpResponse(img_bytes, content_type='image/png')
+
+
+@login_required
+def search(request):
+    user = request.user
+    pattern = request.GET.get('pattern')
+    try:
+        files = list(File.objects.filter(owner=user, name__regex=pattern))
+    except Exception:
+        files = []
+
+    # 分页
+    page = request.GET.get('page')
+    paginator = Paginator(files, settings.PAGE_SIZE)
+    try:
+        files = paginator.page(page)
+    except PageNotAnInteger:
+        # 如果page不是整数，就选择第一页
+        files = paginator.page(1)
+    except EmptyPage:
+        # 如果page超出范围，比如说9999, 就选择最后一页
+        files = paginator.page(paginator.num_pages)
+
+    qs = request.META['QUERY_STRING']
+    qs = re.sub('&page=[0-9]+', '', qs)
+    qs = re.sub('page=[0-9]+&', '', qs)
+    context = {'files': files, 'title': 'Search result',
+               'pattern': pattern, 'qs': qs}
+    return render(request, 'share/search.html', context=context)

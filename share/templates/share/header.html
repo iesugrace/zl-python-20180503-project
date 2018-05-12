@@ -1,17 +1,24 @@
 <div class="header">
   <div class="title">{{ title }}</div>
 
-{% if login_page != True %}
-  <div class="auth_links">
+{% if login_page == True %}
+  <div class="fast_access">
+    <small><a href="{% url 'share:signup' %}">signup</a></small>
+  </div>
+{% else %}
+  <div class="fast_access">
   {% if request.user.is_authenticated %}
-    <small><a href="{% url 'share:logout' %}">logout</a></small>
+    <form action="{% url 'share:search' %}">
+      <input name="pattern" value="{{ pattern }}" placeholder="Enter a regular expression">
+    </form>
+    <small>
+    <a href="{% url 'share:index' %}">files</a> |
+    <a href="{% url 'share:list_shares' %}">shares</a> |
+    <a href="{% url 'share:logout' %}">logout</a>
+    </small>
   {% else %}
     <small><a href="{% url 'share:login' %}">login</a></small>
   {% endif %}
-  </div>
-{% else %}
-  <div class="auth_links">
-    <small><a href="{% url 'share:signup' %}">signup</a></small>
   </div>
 {% endif %}
 

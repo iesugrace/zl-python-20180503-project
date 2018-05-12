@@ -3,11 +3,6 @@
 
 {% block content %}
 
-<div class="nav">
-<a href="{% url 'share:index' %}">文件列表</a> |
-共享列表
-</div>
-
 <table>
   {% for share in shares %}
   <tr>
