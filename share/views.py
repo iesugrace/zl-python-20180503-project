@@ -14,6 +14,7 @@ from django.utils import timezone
 from .forms import LoginForm, RenameForm, ShareForm
 from .models import DirectoryFile, RegularFile, File, Share
 from .libs import make_abspath, gen_code
+from .views_libs import create_directory
 
 
 @login_required
@@ -25,7 +26,8 @@ def index(request):
     home = get_object_or_404(File, name=user.username,
                              owner=user, is_regular=False)
     dirs, files, parents = get_items(home)
-    context = {'dirs': dirs, 'files': files, 'parents': parents}
+    context = {'dirs': dirs, 'files': files,
+               'parents': parents, 'title': 'File sharing'}
     return render(request, 'share/list_dir.html', context=context)
 
 
@@ -56,7 +58,8 @@ def list_dir(request, dir=None):
     user = request.user
     dir = get_object_or_404(File, pk=dir, owner=user)
     dirs, files, parents = get_items(dir)
-    context = {'dirs': dirs, 'files': files, 'parents': parents}
+    context = {'dirs': dirs, 'files': files,
+               'parents': parents, 'title': 'File list'}
     return render(request, 'share/list_dir.html', context=context)
 
 
@@ -78,7 +81,8 @@ def view(request, pk):
         response['Content-Type'] = file.raw_mimetype()
         return response
     else:
-        return render(request, 'share/view.html', context={'file': file})
+        context = {'file': file, 'title': 'View file content'}
+        return render(request, 'share/view.html', context=context)
 
 
 @login_required
@@ -104,7 +108,7 @@ def list_shares(request):
     shares = Share.objects.filter(target__owner=user)
     shares = [x for x in shares if not x.is_expired()]
     shares = sorted(shares, key=(lambda x: x.target.is_regular))
-    context = {'shares': shares}
+    context = {'shares': shares, 'title': 'Share list'}
     return render(request, 'share/list_shares.html', context=context)
 
 
@@ -142,7 +146,8 @@ def create_share(request, pk):
 
     notice = ('note: if you share a directory, all files under '
               'the directory tree will be shared.')
-    context={'file_name': file.name, 'form': form, 'notice': notice}
+    context={'file_name': file.name, 'form': form,
+             'notice': notice, 'title': 'Create share'}
     return render(request, 'share/create_share.html', context=context)
 
 
@@ -186,7 +191,8 @@ def edit_share(request, pk):
         form['expire'].field.disabled = init_data['never_expire']
 
     next_url = request.META['HTTP_REFERER']
-    context={'file_name': share.target.name, 'form': form, 'next': next_url}
+    context={'file_name': share.target.name, 'form': form,
+             'next': next_url, 'title': 'Edit share'}
     return render(request, 'share/create_share.html', context=context)
 
 
@@ -199,7 +205,8 @@ def delete_share(request, pk):
             share.delete()
             return HttpResponseRedirect(request.POST['next'])
     next_url = request.META['HTTP_REFERER']
-    context={'file_name': share.target.name, 'next': next_url}
+    context={'file_name': share.target.name, 'next': next_url,
+             'title': 'Delete share'}
     return render(request, 'share/delete_share.html', context=context)
 
 
@@ -216,7 +223,8 @@ def edit(request, pk):
             return HttpResponseRedirect(reverse('share:detail', args=(pk,)))
     else:
         form = RenameForm({'name': file.name})
-    return render(request, 'share/edit.html', context={'form': form})
+    context = {'form': form, 'title': 'Edit file'}
+    return render(request, 'share/edit.html', context=context)
 
 
 @login_required
@@ -232,7 +240,7 @@ def delete(request, pk):
             next_url = request.POST['next']
             return HttpResponseRedirect(next_url)
     next_url = request.META['HTTP_REFERER']
-    context={'file_name': file.name, 'next': next_url}
+    context={'file_name': file.name, 'next': next_url, 'title': 'Delete file'}
     return render(request, 'share/delete.html', context=context)
 
 
@@ -252,7 +260,8 @@ def login(request):
                 return HttpResponseRedirect(next_url)
     else:
         form = LoginForm()
-    return render(request, 'share/login.html', context={'form': form})
+    context = {'form': form, 'title': 'Login', 'login_page': True}
+    return render(request, 'share/login.html', context=context)
 
 
 def logout(request):
@@ -264,12 +273,14 @@ def signup(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
+            user = form.save()
+            home = create_directory(name=user.username, owner=user)
+            username = user.username
             raw_password = form.cleaned_data.get('password1')
             user = auth.authenticate(username=username, password=raw_password)
             auth.login(request, user)
             return HttpResponseRedirect(reverse('share:index'))
     else:
         form = UserCreationForm()
-    return render(request, 'share/signup.html', {'form': form})
+    context = {'form': form, 'title': 'Sign up'}
+    return render(request, 'share/signup.html', context=context)

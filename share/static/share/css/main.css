@@ -1,3 +1,18 @@
+div.header {
+  padding-bottom: 2.5em;
+  clear: both;
+}
+
+div.title {
+  float: left;
+  width: 50%;
+  font-size: 1.5em;
+}
+
+div.auth_links {
+  float: right;
+}
+
 .nav {
   margin-bottom: .5em;
 }
@@ -10,7 +25,7 @@ div.path {
   padding-left: .5em;
 }
 
-.operation {
+.operation, .operation2 {
   font-variant-caps: small-caps;
 }
 

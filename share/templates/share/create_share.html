@@ -1,9 +1,6 @@
 {% extends "share/base.html" %}
 {% load static %}
 
-{% block title %}
-{% endblock %}
-
 {% block content %}
 <p>share: {{ file_name }}</p>
 <p>{{ notice }}</p>
@@ -21,10 +18,15 @@
       <td>{{ form.expire }}</td>
       <td><label>{{ form.never_expire }}never expire</label></td>
     </tr>
+    <tr>
+      <td></td>
+      <td>
+        <input type="submit" value="Proceed">
+        <input type="button" value="Cancel" onclick="window.history.back();">
+      </td>
+    </tr>
   </table>
   <input type="hidden" name="next" value="{{ next }}">
-  <input type="submit" value="Proceed">
-  <input type="button" value="Cancel" onclick="window.history.back();">
 </form>
 
 <script type="text/javascript" src="{% static 'share/js/jquery.min.js' %}"></script>

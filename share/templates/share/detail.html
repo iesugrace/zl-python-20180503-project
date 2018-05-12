@@ -1,9 +1,6 @@
 {% extends "share/base.html" %}
 {% load filters %}
 
-{% block title %}
-{% endblock %}
-
 {% block content %}
 
 <table>
@@ -19,5 +16,12 @@
   <tr><td>Files:</td><td>{{ file.object.files|countsub }}</td></tr>
 {% endif %}
   <tr><td>Share:</td><td>{{ file.shared_status }}</td></tr>
+  <tr>
+      <td>Operation:</td>
+      <td class="operation2" colspan=2>
+        <a href="{% url 'share:view' file.pk %}">view</a> |
+        <a href="{% url 'share:download' file.pk %}">download</a>
+      </td>
+  </tr>
 </table>
 {% endblock %}
