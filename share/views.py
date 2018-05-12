@@ -3,18 +3,21 @@ import os
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.http import (HttpResponseRedirect, StreamingHttpResponse,
-                         HttpResponseBadRequest)
+                         HttpResponseBadRequest, HttpResponse)
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .forms import LoginForm, RenameForm, ShareForm
 from .models import DirectoryFile, RegularFile, File, Share
 from .libs import make_abspath, gen_code
-from .views_libs import create_directory
+from .views_libs import (create_directory, get_session_id,
+                         get_session_data, set_session_data,
+                         share_approved, permission_ok)
 
 
 @login_required
@@ -63,17 +66,54 @@ def list_dir(request, dir=None):
     return render(request, 'share/list_dir.html', context=context)
 
 
-@login_required
+@require_POST
+def post_code(request, pk):
+    file = get_object_or_404(File, pk=pk)
+    if request.method == 'POST':
+        code = request.POST['code']
+        for share, _ in file.shares():
+            if share.code == code:
+                shares = get_session_data(request, 'shares') or []
+                shares.append(share.pk)
+                set_session_data(request, 'shares', shares)
+                url = reverse('share:detail', args=(pk,))
+                return HttpResponseRedirect(url)
+        return HttpResponse('invalid code')
+
+
 def detail(request, pk):
     """查看文件详情"""
     file = get_object_or_404(File, pk=pk)
-    return render(request, 'share/detail.html', context={'file': file})
+    context = {'file': file}
+    if request.user.is_authenticated():
+        # 登录用户，显示所有信息
+        template_file = "share/detail.html"
+        context['title'] = 'File detail'
+    elif file.shared_to_all():
+        # 匿名共享文件，显示基本信息及下载链接
+        template_file = "share/detail_share_to_all.html"
+        context['title'] = 'Shared file info'
+    elif file.shared_with_code():
+        # 分享码共享文件，显示基本信息，
+        # 如果已经提交了有效的分享码，就显示链接，
+        # 否则，就显示提交分享码的表单
+        template_file = "share/detail_share_with_code.html"
+        context['title'] = 'Shared file info'
+        context['approved'] = share_approved(request, file)
+    else:
+        url = reverse('share:login') + '?next=' + request.META['PATH_INFO']
+        return HttpResponseRedirect(url)
+    return render(request, template_file, context=context)
 
 
-@login_required
 def view(request, pk):
     """查看文件内容"""
     file = get_object_or_404(File, pk=pk)
+
+    if not permission_ok(request, file):
+        url = reverse('share:login') + '?next=' + request.META['PATH_INFO']
+        return HttpResponseRedirect(url)
+
     if file.is_viewable():
         abspath = make_abspath(file.object.path)
         buf = open(abspath, 'rb')
@@ -85,10 +125,14 @@ def view(request, pk):
         return render(request, 'share/view.html', context=context)
 
 
-@login_required
 def download(request, pk):
     """下载文件"""
     file = get_object_or_404(File, pk=pk)
+
+    if not permission_ok(request, file):
+        url = reverse('share:login') + '?next=' + request.META['PATH_INFO']
+        return HttpResponseRedirect(url)
+
     if not file.is_regular:
         return HttpResponseBadRequest("Only a regular file can be downloaded.")
 

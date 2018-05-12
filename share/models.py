@@ -114,36 +114,48 @@ class File(models.Model):
         return mime.from_file(path)
 
     def is_viewable(self):
-        return self.mimetype() in ['pdf', 'text']
+        return self.mimetype() in ['pdf', 'text', 'image', 'audio', 'video']
 
-    def shared_status(self):
-        """根据文件的共享状态返回字符串"""
+    def shares(self):
+        """查找文件本身及所有父母录所有的共享，返回迭代器，由近到远"""
 
-        def _status(node, where='self'):
-            status = []
-            shares = [x for x in node.share_set.all() if not x.is_expired()]
-            for share in shares:
-                if share.code is None:
-                    status.append('[anonymous]/%s' % where)
-                else:
-                    status.append('%s/%s' % (share.code, where))
-            return ', '.join(status)
+        def _shares(node):
+            return [x for x in node.share_set.all() if not x.is_expired()]
 
-        # 查找文件本身的共享信息
-        status = _status(self)
-        if status:
-            return status
+        # 查找文件本身的共享
+        for s in _shares(self):
+            yield s, 'self'
 
         # 查找所有的父目录的共享信息
         node = self
         while node.parent:
             parent = node.parent
             node = parent
-            status = _status(node, 'parent')
-            if status:
-                return status
+            for s in _shares(node):
+                yield s, 'parent'
 
-        return 'private'
+    def shared_status(self):
+        """根据文件的共享状态返回字符串"""
+        status = []
+        for share, text in self.shares():
+            if share.code is None:
+                status.append('[anonymous]/%s' % text)
+            else:
+                status.append('%s/%s' % (share.code, text))
+        res = ', '.join(status)
+        return res or 'private'
+
+    def shared_to_all(self):
+        for s, _ in self.shares():
+            if s.code is None:
+                return True
+        return False
+
+    def shared_with_code(self):
+        for s, _ in self.shares():
+            if s.code is not None:
+                return True
+        return False
 
 
 class DirectoryFile(models.Model):
