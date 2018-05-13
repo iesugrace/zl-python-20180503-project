@@ -128,7 +128,7 @@ def work():
             abspath = get_abspath(name)
             size = get_size(abspath)
             time = make_time()
-            sha1 = digest(abspath)
+            sha1 = digest(path=abspath)
             store_path = make_path(time, sha1)
 
             print('creating RegularFile record for %s' % name)

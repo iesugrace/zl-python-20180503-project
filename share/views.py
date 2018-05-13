@@ -155,6 +155,7 @@ def download(request, pk):
     buf = open(abspath, 'rb')
     response = StreamingHttpResponse(buf)
     response['Content-Type'] = 'application/octet-stream'
+    response['Content-Length'] = str(file.object.size)
     response['Content-Disposition'] = 'attachment;filename="%s"' % file.name
     return response
 
