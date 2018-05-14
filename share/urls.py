@@ -1,6 +1,7 @@
 from django.conf.urls import url
 
 from . import views
+from . import api
 
 urlpatterns = [
     url(r'^(?:^page/(?P<page>[0-9]+)/)?$', views.index, name='index'),
@@ -22,4 +23,5 @@ urlpatterns = [
     url(r'^captcha/', views.gen_captcha, name='gen_captcha'),
     url(r'^search/', views.search, name='search'),
     url(r'^upload/', views.upload, name='upload'),
+    url(r'^api/login/', api.login, name='api_login'),
 ]
