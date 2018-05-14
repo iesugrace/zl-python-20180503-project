@@ -33,8 +33,8 @@ def index(request, page=1):
     用户主页，显示用户资源的相关链接：文件，共享。
     """
     user = request.user
-    home = get_object_or_404(File, name=user.username,
-                             owner=user, is_regular=False)
+    home = get_object_or_404(File, name=user.username, owner=user,
+                             is_regular=False, parent=None)
     return list_dir(request, dir=home, page=page)
 
 
