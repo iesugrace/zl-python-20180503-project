@@ -103,8 +103,7 @@ def resolve_abspath(path, home):
         for name in names:
             obj = get_object_or_404(File, name=name, parent=parent)
             parent = obj
-        else:
-            return obj
+        return obj
     except Http404:
         return None
 
@@ -112,7 +111,7 @@ def resolve_abspath(path, home):
 def transform_path(path, home):
     """
     把相对路径转成绝对路径，当绝对路径不在家目录下时报错，
-    处理路径中可能存在的连续斜杠。
+    处理路径中可能存在的连续斜杠，及尾部的斜杠。
     """
     home_path = '/%s/' % home.name
 
