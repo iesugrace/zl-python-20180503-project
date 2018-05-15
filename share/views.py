@@ -24,7 +24,7 @@ from .libs import make_abspath, gen_code
 from .views_libs import (create_directory, get_session_id,
                          get_session_data, set_session_data,
                          share_approved, permission_ok, make_image, gentext,
-                         make_path)
+                         make_path, get_items)
 
 
 @login_required
@@ -36,26 +36,6 @@ def index(request, page=1):
     home = get_object_or_404(File, name=user.username, owner=user,
                              is_regular=False, parent=None)
     return list_dir(request, dir=home, page=page)
-
-
-def get_items(dir):
-    # 列出目錄下的內容，就是子目錄和文件，同時返回所有父目錄
-    files = records_from_ids(dir.object.subdirs + dir.object.files)
-    parents = [dir]
-    while dir.parent:
-        parents.append(dir.parent)
-        dir = dir.parent
-    parents = parents[::-1]
-    return files, parents
-
-
-def records_from_ids(ids):
-    # ids format: :id1:id2:id3
-    # 每一个id的前面都有一个冒号
-    if not ids:
-        return []
-    ids = [int(id) for id in ids.strip(':').split(':')]
-    return File.objects.filter(pk__in=ids).order_by('is_regular', 'name')
 
 
 @login_required

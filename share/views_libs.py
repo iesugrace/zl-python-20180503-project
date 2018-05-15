@@ -80,3 +80,23 @@ def gentext(n):
 
 def make_path(time, digest=''):
     return os.path.join(time.strftime('%Y%m%d'), digest)
+
+
+def get_items(dir):
+    # 列出目錄下的內容，就是子目錄和文件，同時返回所有父目錄
+    files = records_from_ids(dir.object.subdirs + dir.object.files)
+    parents = [dir]
+    while dir.parent:
+        parents.append(dir.parent)
+        dir = dir.parent
+    parents = parents[::-1]
+    return files, parents
+
+
+def records_from_ids(ids):
+    # ids format: :id1:id2:id3
+    # 每一个id的前面都有一个冒号
+    if not ids:
+        return []
+    ids = [int(id) for id in ids.strip(':').split(':')]
+    return File.objects.filter(pk__in=ids).order_by('is_regular', 'name')

@@ -121,6 +121,8 @@ def save_session(data):
 
 def load_session():
     path = '/tmp/.client_of_share_session'
+    if not os.path.exists(path):
+        return {}
     with open(path) as f:
         return json.loads(f.read())
 
@@ -153,8 +155,63 @@ def logout(args, api):
     return True
 
 
+def send_request(api, data):
+    cookies = load_session()
+    r = requests.post(api, data=data, cookies=cookies)
+    if r.ok:
+        res = r.json()
+        if res['status']:
+            return res
+        else:
+            print(res.get('errors', ''))
+    else:
+        print('request failed (code %s)' % r.status_code)
+
+
 def ls(args, api):
-    ...
+    request = {'long': {'flag': '-l'},
+               'directory': {'flag': '-d'}}
+    p = ArgParser()
+    params = p.parse_args(args, request)
+    mapping = params[0]
+    long = mapping.get('long', False)
+    directory = mapping.get('directory', False)
+    names = params[1] or []
+
+    data = dict(long=long, directory=directory, names=names)
+    res = send_request(api, data)
+    if not res:
+        return False
+
+    # 输出文件的信息
+    if long:
+        files = []
+        for block in res['output']:
+            files.extend(list(block.values())[0])
+        format_output(files)
+    else:
+        for block in res['output']:
+            for key, files in block.items():
+                if not files:
+                    continue
+                for file in files:
+                    print(file)
+    # 输出错误信息
+    errors = res['errors']
+    if errors:
+        for e in errors:
+            print('error:', e)
+
+
+def format_output(files):
+    # 字段：regular, owner, size, time, name
+    sizes = [len(str(f['size'])) for f in files]
+    size_len = max(sizes)
+    for f in files:
+        type = '-' if f['regular'] else 'd'
+        fmt = '%%s %%s %%%ds %%s %%s' % size_len
+        line = fmt % (type, f['owner'], f['size'], f['time'], f['name'])
+        print(line)
 
 
 def mkdir(args, api):

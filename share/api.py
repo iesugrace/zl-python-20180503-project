@@ -1,7 +1,15 @@
+import os
+
 from django.contrib import auth
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+from django.http import Http404
+from django.conf import settings
+
+from .models import File
 
 
 @csrf_exempt
@@ -24,3 +32,120 @@ def logout(request):
     return JsonResponse(data)
 
 
+def inform_login(request):
+    """给客户端发送适当的登录提示信息"""
+    data = {'status': False, 'errors': 'login required'}
+    return JsonResponse(data)
+
+
+@login_required(login_url=settings.API_LOGIN_URL)
+@csrf_exempt
+def ls(request):
+    user = request.user
+    long = request.POST.get('long', '') == 'True'
+    directory = request.POST.get('directory', '') == 'True'
+    names = request.POST.getlist('names', [])
+    home = get_object_or_404(File, owner=user, name=user.username,
+                             is_regular=False, parent=None)
+
+    # 第一步，取出所有的名字对应的文件或目录
+    if not names:
+        # list the home directory
+        files = [home]
+        errors = []
+    else:
+        files, errors = paths_to_files(names, home)
+
+    # 第二步，有必要时列出目录的内容
+    if directory:
+        files = [{'flat': files}]
+    else:
+        dirs = [x for x in files if not x.is_regular]
+        regs = [x for x in files if x.is_regular]
+        files = []
+        for dir in dirs:
+            subs = File.objects.filter(parent=dir)
+            label = getattr(dir, 'requested_path', dir.name)
+            files.append({label: subs})
+        files.append({'regular': regs})
+
+    output = render_ls_output(files, long)
+    res = {'status': True, 'output': output, 'errors': errors}
+    return JsonResponse(res)
+
+
+def paths_to_files(paths, home):
+
+    """ 把客户端提交过来的原始路径对应的文件提取出来 """
+
+    files = []
+    errors = []
+    for path in paths:
+        abspath = transform_path(path, home)
+        if abspath is None:
+            errors.append('no permission on %s' % path)
+            continue
+        file = resolve_abspath(abspath, home)
+        if file:
+            # 保存原始的请求路径，用于客户端显示结果
+            file.requested_path = path
+            files.append(file)
+        else:
+            errors.append('file not found: %s' % path)
+    return files, errors
+
+
+def resolve_abspath(path, home):
+    # names 是相对于家目录的路径中所有的文件名字
+    names = path.split('/')[2:]
+    parent = home
+    try:
+        for name in names:
+            obj = get_object_or_404(File, name=name, parent=parent)
+            parent = obj
+        else:
+            return obj
+    except Http404:
+        return None
+
+
+def transform_path(path, home):
+    """
+    把相对路径转成绝对路径，当绝对路径不在家目录下时报错，
+    处理路径中可能存在的连续斜杠。
+    """
+    home_path = '/%s/' % home.name
+
+    # 相对路径
+    if not path.startswith('/'):
+        path = home_path + path
+    # 不在家目录下的绝对路径
+    elif path != home_path[:-1] and not path.startswith(home_path):
+        return None
+    # 处理连续的斜杠
+    path = os.path.normpath(path)
+    return path
+
+
+def render_ls_output(files, long):
+    # 抽取文件的详细信息，或者仅仅抽取文件的名字
+    res = []
+    if not long:
+        for file_info in files:
+            for key, file_objs in file_info.items():
+                res.append({key: [getattr(f, 'requested_path', f.name)
+                                    for f in file_objs]})
+    else:
+        for file_info in files:
+            for key, file_objs in file_info.items():
+                records = []
+                for f in file_objs:
+                    # 抽取字段：type, owner, size, time, name
+                    record = {'regular': f.is_regular,
+                              'owner': f.owner.username,
+                              'size': f.object.size,
+                              'time': f.object.time.strftime('%F %T'),
+                              'name': getattr(f, 'requested_path', f.name)}
+                    records.append(record)
+                res.append({key: records})
+    return res

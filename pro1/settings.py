@@ -124,3 +124,4 @@ PAGE_SIZE = 25
 LOGIN_URL = '/share/login/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+API_LOGIN_URL = '/share/api/inform_login/'
