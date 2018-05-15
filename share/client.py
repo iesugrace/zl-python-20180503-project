@@ -235,6 +235,32 @@ def mkdir(args, api):
             print('error:', e)
 
 
+def rmdir(args, api):
+    request = {'parents': {'flag': '-p'},
+               'verbose': {'flag': '-v'}}
+    p = ArgParser()
+    params = p.parse_args(args, request)
+    mapping = params[0]
+    parents = mapping.get('parents', False)
+    verbose = mapping.get('verbose', False)
+    names = params[1] or []
+
+    data = dict(parents=parents, verbose=verbose, names=names)
+    res = send_request(api, data)
+    if not res:
+        return False
+
+    # -v, 输出详细信息
+    if verbose:
+        for name in res['output']:
+            print('removing directory: %s' % name)
+
+    # 输出错误信息
+    if not res['status']:
+        for e in res['errors']:
+            print('error:', e)
+
+
 def cp(args, api):
     ...
 
@@ -261,6 +287,7 @@ if __name__ == '__main__':
         'logout': {'name': logout, 'api': 'http://127.0.0.1:8000/share/api/logout/'},
         'ls': {'name': ls, 'api': 'http://127.0.0.1:8000/share/api/ls/'},
         'mkdir': {'name': mkdir, 'api': 'http://127.0.0.1:8000/share/api/mkdir/'},
+        'rmdir': {'name': rmdir, 'api': 'http://127.0.0.1:8000/share/api/rmdir/'},
         'cp': {'name': cp, 'api': 'http://127.0.0.1:8000/share/api/cp/'},
         'fetch': {'name': fetch, 'api': 'http://127.0.0.1:8000/share/api/fetch/'},
     }

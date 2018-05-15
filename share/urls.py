@@ -27,4 +27,5 @@ urlpatterns = [
     url(r'^api/inform_login/', api.inform_login, name='api_inform_login'),
     url(r'^api/ls/', api.ls, name='api_ls'),
     url(r'^api/mkdir/', api.mkdir, name='api_mkdir'),
+    url(r'^api/rmdir/', api.rmdir, name='api_rmdir'),
 ]

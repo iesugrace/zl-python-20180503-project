@@ -157,6 +157,15 @@ class File(models.Model):
                 return True
         return False
 
+    def abspath(self):
+        """文件的绝对路径"""
+        node = self
+        names = [node.name]
+        while node.parent:
+            node = node.parent
+            names.append(node.name)
+        return '/' + '/'.join(names[::-1])
+
 
 class DirectoryFile(models.Model):
     # 下一级节点，子目录/文件的表示法：':123:34567:15379'

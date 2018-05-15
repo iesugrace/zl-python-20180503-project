@@ -210,6 +210,34 @@ def mkdir(request):
     return JsonResponse(res)
 
 
+@login_required(login_url=settings.API_LOGIN_URL)
+@csrf_exempt
+def rmdir(request):
+    user = request.user
+    opt_parents = request.POST.get('parents', '') == 'True'
+    names = request.POST.getlist('names', [])
+    home = get_object_or_404(File, owner=user, name=user.username,
+                             is_regular=False, parent=None)
+
+    removed = []
+    errors = []
+    for name in names:
+        abspath = transform_path(name, home)
+        objs = collect_path_objects(abspath, home)
+        for dir in objs[-1:0:-1]:    # revert and exclude the home directory
+            if dir.object.size == 0:
+                delete_directory(dir)
+                removed.append(dir.abspath())
+            else:
+                errmsg = 'failed to remove: %s: directory not empty' % name
+                errors.append(errmsg)
+
+    res = {'status': not bool(errors),
+           'output': removed,
+           'errors': errors}
+    return JsonResponse(res)
+
+
 def create_directory(name, owner, parent=None):
     fo = DirectoryFile.objects.create()
     dir = File.objects.create(name=name, owner=owner, is_regular=False)
@@ -217,3 +245,9 @@ def create_directory(name, owner, parent=None):
     if parent:
         parent.add(dir)
     return dir
+
+
+def delete_directory(dir):
+    dir.parent.remove(dir)
+    dir.object.delete()
+    dir.delete()
