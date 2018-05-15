@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.http import Http404
 from django.conf import settings
 
-from .models import File
+from .models import File, DirectoryFile
 
 
 @csrf_exempt
@@ -95,6 +95,21 @@ def paths_to_files(paths, home):
     return files, errors
 
 
+def collect_path_objects(path, home):
+    # names 是相对于家目录的路径中所有的文件名字
+    names = path.split('/')[2:]
+    parent = home
+    objs = [home]
+    try:
+        for name in names:
+            obj = get_object_or_404(File, name=name, parent=parent)
+            parent = obj
+            objs.append(parent)
+    except Http404:
+        ...
+    return objs
+
+
 def resolve_abspath(path, home):
     # names 是相对于家目录的路径中所有的文件名字
     names = path.split('/')[2:]
@@ -148,3 +163,57 @@ def render_ls_output(files, long):
                     records.append(record)
                 res.append({key: records})
     return res
+
+
+@login_required(login_url=settings.API_LOGIN_URL)
+@csrf_exempt
+def mkdir(request):
+    user = request.user
+    opt_parents = request.POST.get('parents', '') == 'True'
+    names = request.POST.getlist('names', [])
+    home = get_object_or_404(File, owner=user, name=user.username,
+                             is_regular=False, parent=None)
+
+    created = []
+    errors = []
+    for name in names:
+        abspath = transform_path(name, home)
+        objs = collect_path_objects(abspath, home)
+        path_elements = abspath.split('/')[1:]
+        exists_num = len(objs)
+        request_num = len(path_elements)
+        if request_num == exists_num:  # exists
+            if not opt_parents:
+                errors.append('cannot create %s: file exists' % name)
+
+        # 目标不存在，可以创建
+        else:
+            if request_num - exists_num == 1:
+                # 父目录全部存在，可以直接创建
+                create_directory(path_elements[-1], user, objs[-1])
+                created.append(name)
+            else:
+                # 缺少部分父目录
+                if opt_parents:     # -d选项, 同时创建不存在的父目录
+                    parent = objs[-1]
+                    for dir_name in path_elements[exists_num:]:
+                        dir = create_directory(dir_name, user, parent)
+                        created.append(dir_name)
+                        parent = dir
+                else:               # 出错
+                    errmsg = 'cannot create %s: parent not exists' % name
+                    errors.append(errmsg)
+
+    res = {'status': not bool(errors),
+           'output': created,
+           'errors': errors}
+    return JsonResponse(res)
+
+
+def create_directory(name, owner, parent=None):
+    fo = DirectoryFile.objects.create()
+    dir = File.objects.create(name=name, owner=owner, is_regular=False)
+    dir.link(fo)
+    if parent:
+        parent.add(dir)
+    return dir

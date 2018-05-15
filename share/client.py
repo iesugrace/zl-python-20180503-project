@@ -159,11 +159,7 @@ def send_request(api, data):
     cookies = load_session()
     r = requests.post(api, data=data, cookies=cookies)
     if r.ok:
-        res = r.json()
-        if res['status']:
-            return res
-        else:
-            print(res.get('errors', ''))
+        return r.json()
     else:
         print('request failed (code %s)' % r.status_code)
 
@@ -197,9 +193,8 @@ def ls(args, api):
                 for file in files:
                     print(file)
     # 输出错误信息
-    errors = res['errors']
-    if errors:
-        for e in errors:
+    if not res['status']:
+        for e in res['errors']:
             print('error:', e)
 
 
@@ -215,7 +210,29 @@ def format_output(files):
 
 
 def mkdir(args, api):
-    ...
+    request = {'parents': {'flag': '-p'},
+               'verbose': {'flag': '-v'}}
+    p = ArgParser()
+    params = p.parse_args(args, request)
+    mapping = params[0]
+    parents = mapping.get('parents', False)
+    verbose = mapping.get('verbose', False)
+    names = params[1] or []
+
+    data = dict(parents=parents, verbose=verbose, names=names)
+    res = send_request(api, data)
+    if not res:
+        return False
+
+    # -v, 输出详细信息
+    if verbose:
+        for name in res['output']:
+            print('created directory: %s' % name)
+
+    # 输出错误信息
+    if not res['status']:
+        for e in res['errors']:
+            print('error:', e)
 
 
 def cp(args, api):
