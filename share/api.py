@@ -22,13 +22,13 @@ def login(request):
         auth.login(request, user)
         data = {'status': True}
     else:
-        data = {'status': False}
+        data = {'status': False, 'errors': 'login failed'}
     return JsonResponse(data)
 
 
 def logout(request):
     auth.logout(request)
-    data = {'status': False}
+    data = {'status': True}
     return JsonResponse(data)
 
 
@@ -70,7 +70,7 @@ def ls(request):
         files.append({'regular': regs})
 
     output = render_ls_output(files, long)
-    res = {'status': True, 'output': output, 'errors': errors}
+    res = {'status': not bool(errors), 'output': output, 'errors': errors}
     return JsonResponse(res)
 
 

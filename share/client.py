@@ -29,7 +29,7 @@ from thinap import ArgParser
 
 
 def help():
-    text = """available commands: login logout ls mkdir cp fetch
+    text = """available commands: login logout ls mkdir rmdir cp fetch
 
 路径表示法：
 
@@ -138,13 +138,19 @@ def login(args, api):
     password = mapping.get('password')
     assert username and password, 'user name and password are required'
 
-    r = requests.post(api, data={'username': username, 'password': password})
-    if r.ok:
+    data = {'username': username, 'password': password}
+    res, r = send_request(api, data, send_cookies=False)
+    if not res:
+        return False
+
+    if res['status']:
         sid = r.cookies.get('sessionid')
         if sid:
             save_session({'sessionid': sid})
             return True
-    return False
+    else:
+        print(res['errors'])
+        return False
 
 
 def logout(args, api):
@@ -155,13 +161,17 @@ def logout(args, api):
     return True
 
 
-def send_request(api, data):
-    cookies = load_session()
+def send_request(api, data, send_cookies=True):
+    if send_cookies:
+        cookies = load_session()
+    else:
+        cookies = {}
     r = requests.post(api, data=data, cookies=cookies)
     if r.ok:
-        return r.json()
+        return r.json(), r
     else:
         print('request failed (code %s)' % r.status_code)
+        return None, None
 
 
 def ls(args, api):
@@ -175,7 +185,7 @@ def ls(args, api):
     names = params[1] or []
 
     data = dict(long=long, directory=directory, names=names)
-    res = send_request(api, data)
+    res, r = send_request(api, data)
     if not res:
         return False
 
@@ -196,6 +206,9 @@ def ls(args, api):
     if not res['status']:
         for e in res['errors']:
             print('error:', e)
+        return False
+    else:
+        return True
 
 
 def format_output(files):
@@ -220,7 +233,7 @@ def mkdir(args, api):
     names = params[1] or []
 
     data = dict(parents=parents, verbose=verbose, names=names)
-    res = send_request(api, data)
+    res, r = send_request(api, data)
     if not res:
         return False
 
@@ -233,6 +246,9 @@ def mkdir(args, api):
     if not res['status']:
         for e in res['errors']:
             print('error:', e)
+        return False
+    else:
+        return True
 
 
 def rmdir(args, api):
@@ -246,7 +262,7 @@ def rmdir(args, api):
     names = params[1] or []
 
     data = dict(parents=parents, verbose=verbose, names=names)
-    res = send_request(api, data)
+    res, r = send_request(api, data)
     if not res:
         return False
 
@@ -259,6 +275,9 @@ def rmdir(args, api):
     if not res['status']:
         for e in res['errors']:
             print('error:', e)
+        return False
+    else:
+        return True
 
 
 def cp(args, api):
