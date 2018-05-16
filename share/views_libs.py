@@ -99,4 +99,5 @@ def records_from_ids(ids):
     if not ids:
         return []
     ids = [int(id) for id in ids.strip(':').split(':')]
-    return File.objects.filter(pk__in=ids).order_by('is_regular', 'name')
+    files = File.objects.filter(pk__in=ids).order_by('is_regular', 'name')
+    return [f for f in files if getattr(f.object, 'finished', True)]

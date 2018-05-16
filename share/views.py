@@ -8,7 +8,7 @@ from django.shortcuts import render, get_object_or_404
 from django import urls
 from django.urls import reverse
 from django.http import (HttpResponseRedirect, StreamingHttpResponse,
-                         HttpResponseBadRequest, HttpResponse)
+                         HttpResponseBadRequest, HttpResponse, Http404)
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
@@ -79,6 +79,9 @@ def post_code(request, pk):
 def detail(request, pk):
     """查看文件详情"""
     file = get_object_or_404(File, pk=pk)
+    if file.is_regular and not file.object.finished:
+        raise Http404('No File matches the given query')
+
     context = {'file': file}
     if request.user.is_authenticated():
         # 登录用户，显示所有信息
@@ -104,6 +107,8 @@ def detail(request, pk):
 def view(request, pk):
     """查看文件内容"""
     file = get_object_or_404(File, pk=pk)
+    if file.is_regular and not file.object.finished:
+        raise Http404('No File matches the given query')
 
     if not permission_ok(request, file):
         url = reverse('share:login') + '?next=' + request.META['PATH_INFO']
@@ -123,6 +128,8 @@ def view(request, pk):
 def download(request, pk):
     """下载文件"""
     file = get_object_or_404(File, pk=pk)
+    if file.is_regular and not file.object.finished:
+        raise Http404('No File matches the given query')
 
     if not permission_ok(request, file):
         url = reverse('share:login') + '?next=' + request.META['PATH_INFO']
@@ -168,6 +175,9 @@ def list_shares(request, page=1):
 def create_share(request, pk):
     """共享文件"""
     file = get_object_or_404(File, pk=pk)
+    if file.is_regular and not file.object.finished:
+        raise Http404('No File matches the given query')
+
     if request.method == 'POST':
         form = ShareForm(request.POST)
         form.errors.clear()
@@ -266,6 +276,9 @@ def delete_share(request, pk):
 def edit(request, pk):
     """修改文件"""
     file = get_object_or_404(File, pk=pk)
+    if file.is_regular and not file.object.finished:
+        raise Http404('No File matches the given query')
+
     if request.method == 'POST':
         form = RenameForm(request.POST)
         if form.is_valid():
@@ -283,6 +296,9 @@ def edit(request, pk):
 def delete(request, pk):
     """删除文件"""
     file = get_object_or_404(File, pk=pk)
+    if file.is_regular and not file.object.finished:
+        raise Http404('No File matches the given query')
+
     if not file.is_regular:
         return HttpResponseBadRequest("Only a regular file can be deleted.")
 
@@ -363,6 +379,7 @@ def search(request):
     pattern = request.GET.get('pattern')
     try:
         files = list(File.objects.filter(owner=user, name__regex=pattern))
+        files = [f for f in files if getattr(f.object, 'finished', True)]
     except Exception:
         files = []
 
