@@ -28,4 +28,5 @@ urlpatterns = [
     url(r'^api/ls/', api.ls, name='api_ls'),
     url(r'^api/mkdir/', api.mkdir, name='api_mkdir'),
     url(r'^api/rmdir/', api.rmdir, name='api_rmdir'),
+    url(r'^api/exists/', api.exists, name='api_exists'),
 ]

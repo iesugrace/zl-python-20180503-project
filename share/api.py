@@ -251,3 +251,16 @@ def delete_directory(dir):
     dir.parent.remove(dir)
     dir.object.delete()
     dir.delete()
+
+
+@login_required(login_url=settings.API_LOGIN_URL)
+@csrf_exempt
+def exists(request):
+    user = request.user
+    name = request.POST.get('name')
+    home = get_object_or_404(File, owner=user, name=user.username,
+                             is_regular=False, parent=None)
+
+    files, errors = paths_to_files([name], home)
+    res = {'status': bool(files), 'errors': errors}
+    return JsonResponse(res)
