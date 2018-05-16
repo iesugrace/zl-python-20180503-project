@@ -224,10 +224,13 @@ def rmdir(request):
     for name in names:
         abspath = transform_path(name, home)
         objs = collect_path_objects(abspath, home)
-        for dir in objs[-1:0:-1]:    # revert and exclude the home directory
-            if dir.object.size == 0:
-                delete_directory(dir)
-                removed.append(dir.abspath())
+        for file in objs[-1:0:-1]:    # revert and exclude the home directory
+            if file.is_regular:
+                errmsg = 'failed to remove: %s: not a directory' % name
+                errors.append(errmsg)
+            elif file.object.size == 0:
+                delete_directory(file)
+                removed.append(file.abspath())
             else:
                 errmsg = 'failed to remove: %s: directory not empty' % name
                 errors.append(errmsg)
